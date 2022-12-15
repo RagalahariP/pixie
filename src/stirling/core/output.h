@@ -23,10 +23,12 @@
 #include <string_view>
 #include <vector>
 
+#include "src/common/json/json.h"
 #include "src/common/base/base.h"
 #include "src/shared/types/column_wrapper.h"
 #include "src/stirling/core/types.h"
 #include "src/stirling/proto/stirling.pb.h"
+
 
 namespace px {
 namespace stirling {
@@ -34,6 +36,10 @@ namespace stirling {
 // Returns a list of string representations of all of the records in the record batch.
 std::vector<std::string> ToString(const stirlingpb::TableSchema& schema,
                                   const types::ColumnWrapperRecordBatch& record_batch);
+
+// Prints JSONrepresentations of all of the records in the record batch.
+std::vector<std::string> ToJson(const stirlingpb::TableSchema& schema,
+                                const types::ColumnWrapperRecordBatch& record_batch);
 
 // Returns a string representation of all of the records in the record batch.
 // Each line of record is prepended with the prefix.

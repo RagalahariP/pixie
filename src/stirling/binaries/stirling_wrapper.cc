@@ -54,6 +54,7 @@ using ::px::stirling::stirlingpb::InfoClass;
 using ::px::stirling::stirlingpb::Publish;
 using ::px::types::ColumnWrapperRecordBatch;
 using ::px::types::TabletID;
+using ::px::stirling::ToJson;
 
 using DynamicTracepointDeployment =
     ::px::stirling::dynamic_tracing::ir::logical::TracepointDeployment;
@@ -62,7 +63,7 @@ DEFINE_string(trace, "",
               "Dynamic trace to deploy. Either (1) the path to a file containing PxL or IR trace "
               "spec, or (2) <path to object file>:<symbol_name> for full-function tracing.");
 DEFINE_string(print_record_batches,
-              "http_events,mysql_events,pgsql_events,redis_events,cql_events,dns_events",
+              "proc_exit_events",
               "Comma-separated list of tables to print.");
 DEFINE_bool(init_only, false, "If true, only runs the init phase and exits. For testing.");
 DEFINE_int32(timeout_secs, -1,
@@ -94,9 +95,15 @@ Status StirlingWrapperCallback(uint64_t table_id, TabletID /* tablet_id */,
   }
   const InfoClass& table_info = iter->second;
 
+# if 0
   if (g_table_print_enables.contains(table_info.schema().name())) {
+    std::cout<<"table_info.schema().name()" << table_info.schema().name() << std::endl ;
     // Only output enabled tables (lookup by name).
     std::cout << ToString(table_info.schema().name(), table_info.schema(), *record_batch);
+  }
+#endif
+  if (table_info.schema().name() == "proc_exit_events") {
+    std::cout << ToJson(table_info.schema(), *record_batch) << std::endl ;
   }
 
   return Status::OK();

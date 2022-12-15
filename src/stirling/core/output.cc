@@ -17,6 +17,7 @@
  */
 
 #include "src/stirling/core/output.h"
+#include "src/common/json/json.h"
 
 #include <utility>
 
@@ -39,6 +40,112 @@ constexpr char kTimeFormat[] = "%Y-%m-%d %X";
 const absl::TimeZone kLocalTimeZone;
 
 namespace {
+
+# if 1
+namespace internal {
+inline rapidjson::GenericStringRef<char> StringRef(std::string_view s) {
+  return rapidjson::GenericStringRef<char>(s.data(), s.size());
+}
+}
+/* Process Table schema and STDOUT events and metrics in JSON format
+   For exmaple,
+   {
+	"name": "eBPF.process_exit.stats",
+	"protocol_version": "4",
+	"data": [
+		{
+			"metrics": [
+			],
+			"events": [
+			]
+		}
+	]
+  } */
+
+/* Adding ToJson() specific to proc_exit_table as part of PoC to get Json output.
+   TODO: Modify this function as generic as possible */
+std::string ToJson(const stirlingpb::TableSchema& schema,
+            const ColumnWrapperRecordBatch& record_batch, size_t index) {
+  DCHECK(!record_batch.empty());
+  DCHECK_EQ(schema.elements_size(), record_batch.size());
+  DCHECK_LT(index, record_batch[0]->Size());
+
+  /* Extract process name and signal from table */
+  std::string cmd;
+  int  signal;
+  for (int j = 0; j < schema.elements_size(); ++j) {
+    const auto& col = record_batch[j];
+    const auto& col_schema = schema.elements(j);
+    if (col_schema.name() == "comm") {
+        cmd = col->Get<StringValue>(index);
+    }
+    else if (col_schema.name() == "signal") {
+        signal = col->Get<Int64Value>(index).val;
+     }
+  }
+
+  rapidjson::Document document;
+  document.SetObject();
+
+  rapidjson::Value object(rapidjson::kObjectType);
+  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+  // Create metrics list from table information
+  // For example:
+  // 		"metrics": [{
+  //			"attributes": {
+  //				"eBPF.exitedPname": "docker-init"
+  //			},
+  //			"value": 1,
+  //			"name": "eBPF.numberOfProcessExited.metric",
+  //			"event_type": "processStatus",
+  //			"type": "count"
+  //		}]
+  rapidjson::Value attributes(rapidjson::kObjectType);
+  attributes.AddMember("eBPF.exitedPname", internal::StringRef(cmd), allocator);
+
+  rapidjson::Value metricsRec(rapidjson::kObjectType);
+  metricsRec.AddMember("attributes", attributes, allocator);
+  metricsRec.AddMember("value", 1, allocator);
+  metricsRec.AddMember("name", "eBPF.numberOfProcessExited.metric", allocator);
+  metricsRec.AddMember("event_type", "processStatus", allocator);
+  metricsRec.AddMember("type", "count", allocator);
+
+  rapidjson::Value metricsArray(rapidjson::kArrayType);
+  metricsArray.PushBack(metricsRec, allocator);
+
+  // Create events list from table information
+  // For example:
+  // "events": [{
+  //			"summary": "process docker-init exited with signal 0",
+  //			"category": "notifications"
+  // 		}]
+  rapidjson::Value eventsArray(rapidjson::kArrayType);
+  std::string event,category;
+  absl::StrAppend(&event, "process ", cmd, " exited with signal ", signal);
+  absl::StrAppend(&category, "notifications");
+  rapidjson::Value eventsRec(rapidjson::kObjectType);
+  eventsRec.AddMember("summary", internal::StringRef(event), allocator);
+  eventsRec.AddMember("category", internal::StringRef(category), allocator);
+  eventsArray.PushBack(eventsRec, allocator);
+
+  // Create data object as expected by OHI
+  rapidjson::Value data(rapidjson::kObjectType);
+  data.AddMember("metrics", metricsArray, allocator);
+  data.AddMember("events", eventsArray, allocator);
+  rapidjson::Value dataArray(rapidjson::kArrayType);
+  dataArray.PushBack(data, allocator);
+
+  document.AddMember("protocol_version", "4", allocator);
+  document.AddMember("data", dataArray, allocator);
+
+   rapidjson::StringBuffer strbuf;
+   rapidjson::Writer<rapidjson::StringBuffer> writer(strbuf);
+   document.Accept(writer);
+
+   return strbuf.GetString() ;
+}
+#endif
 
 std::string ToString(const stirlingpb::TableSchema& schema,
                      const ColumnWrapperRecordBatch& record_batch, size_t index) {
@@ -115,6 +222,23 @@ std::vector<std::string> ToString(const stirlingpb::TableSchema& schema,
   std::vector<std::string> out;
   for (size_t i = 0; i < num_records; ++i) {
     out.push_back(ToString(schema, record_batch, i));
+  }
+  return out;
+}
+
+std::vector<std::string> ToJson(const stirlingpb::TableSchema& schema,
+                                const types::ColumnWrapperRecordBatch& record_batch) {
+  DCHECK_EQ(schema.elements_size(), record_batch.size());
+
+  const size_t num_records = record_batch.front()->Size();
+
+  for (const auto& col : record_batch) {
+    DCHECK_EQ(col->Size(), num_records);
+  }
+
+  std::vector<std::string> out;
+  for (size_t i = 0; i < num_records; ++i) {
+    out.push_back(ToJson(schema, record_batch, i));
   }
   return out;
 }
