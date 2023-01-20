@@ -56,44 +56,43 @@ inline rapidjson::GenericStringRef<char> StringRef(std::string_view s) {
 }
 }
 
-void NetThroughputConnector::TransferDataImpl(ConnectorContext* /* ctx */) {
+void NetThroughputConnector::TransferDataImpl(ConnectorContext * /* ctx */ ) {
   DCHECK_EQ(data_tables_.size(), 1);
-  DataTable* data_table = data_tables_[0];
+  DataTable * data_table = data_tables_[0];
 
   if (data_table == nullptr) {
     return;
   }
 
-  std::vector<std::pair<ip_key_t, uint64_t>> items =
-      GetHashTable<ip_key_t, uint64_t>("ipv4_send_bytes").get_table_offline();
+  std::vector < std::pair < ip_key_t, uint64_t >> items =
+    GetHashTable < ip_key_t, uint64_t > ("ipv4_send_bytes").get_table_offline();
 
   rapidjson::Document document;
   document.SetObject();
 
   rapidjson::Value object(rapidjson::kObjectType);
-  rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+  rapidjson::Document::AllocatorType & allocator = document.GetAllocator();
 
   rapidjson::Value data(rapidjson::kObjectType);
   rapidjson::Value metricsArray(rapidjson::kArrayType);
-  for (auto& item : items) {
+  for (auto & item: items) {
     if (item.first.addr.sa.sa_family == AF_INET) {
-             rapidjson::Value metricsRec(rapidjson::kObjectType);
-             rapidjson::Value attributes(rapidjson::kObjectType);
-             metricsRec.AddMember("name", "eBPF.tcp_egress_throughput.metric", allocator);
-             metricsRec.AddMember("event_type", "egressTCPThroughput", allocator);
-             metricsRec.AddMember("type", "count", allocator);
-             metricsRec.AddMember("value", uint64_t(item.second), allocator);
-             std::string addr_string = IPv4AddrToString(item.first.addr.in4.sin_addr).ConsumeValueOrDie() ; 
-             std::cout << "addr_string is "<< addr_string << " and length is " << addr_string.length() << std::endl ;
-             attributes.AddMember("remote-ip",  std::string(addr_string), allocator);
-             attributes.AddMember("process", internal::StringRef(item.first.name), allocator);
-             metricsRec.AddMember("attributes", attributes, allocator);
-             metricsArray.PushBack(metricsRec, allocator);
-             addr_string = "";
-   }
-  else {
-     std::cout<< "IPv6 address" << std::endl;
-     continue ;
+      rapidjson::Value metricsRec(rapidjson::kObjectType);
+      rapidjson::Value attributes(rapidjson::kObjectType);
+      metricsRec.AddMember("name", "eBPF.tcp_egress_throughput.metric", allocator);
+      metricsRec.AddMember("event_type", "egressTCPThroughput", allocator);
+      metricsRec.AddMember("type", "count", allocator);
+      metricsRec.AddMember("value", uint64_t(item.second), allocator);
+      std::string addr_string = IPv4AddrToString(item.first.addr.in4.sin_addr).ConsumeValueOrDie();
+      std::cout << "addr_string is " << addr_string << " and length is " << addr_string.length() << std::endl;
+      attributes.AddMember("remote-ip", std::string(addr_string), allocator);
+      attributes.AddMember("process", internal::StringRef(item.first.name), allocator);
+      metricsRec.AddMember("attributes", attributes, allocator);
+      metricsArray.PushBack(metricsRec, allocator);
+      addr_string = "";
+    } else {
+      std::cout << "IPv6 address" << std::endl;
+      continue;
     }
   }
   data.AddMember("metrics", metricsArray, allocator);
@@ -102,12 +101,11 @@ void NetThroughputConnector::TransferDataImpl(ConnectorContext* /* ctx */) {
   dataArray.PushBack(data, allocator);
   document.AddMember("data", dataArray, allocator);
 
-   rapidjson::StringBuffer strbuf;
-   rapidjson::Writer<rapidjson::StringBuffer> writer(strbuf);
-   document.Accept(writer);
-   std::cout<<strbuf.GetString()<<std::endl;
-      
-}
+  rapidjson::StringBuffer strbuf;
+  rapidjson::Writer < rapidjson::StringBuffer > writer(strbuf);
+  document.Accept(writer);
+  std::cout << strbuf.GetString() << std::endl;
 
+}
 }  // namespace stirling
 }  // namespace px

@@ -50,11 +50,11 @@ static int tcp_sendstat(int size)
     uint16_t family = -1;
     uint16_t port = -1;
 
-   BPF_PROBE_READ_KERNEL_VAR(port, &sk_common->skc_dport);
+    BPF_PROBE_READ_KERNEL_VAR(port, &sk_common->skc_dport);
  
     BPF_PROBE_READ_KERNEL_VAR(family, &sk_common->skc_family);
-    bpf_trace_printk("Family is %u", family)  ;
-     struct ip_key_t ip_key = {};
+    //bpf_trace_printk("Family is %u", family)  ;
+    struct ip_key_t ip_key = {};
     ip_key.addr.sa.sa_family = family;
 
     if (family == AF_INET) {
