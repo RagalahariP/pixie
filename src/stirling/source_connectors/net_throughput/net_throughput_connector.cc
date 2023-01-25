@@ -56,6 +56,21 @@ inline rapidjson::GenericStringRef<char> StringRef(std::string_view s) {
 }
 }
 
+
+void  AddRecHeaders(rapidjson::Value &metricsRec, rapidjson::Document::AllocatorType& a, std::pair<ip_key_t, uint64_t> item) {
+      metricsRec.AddMember("name", "eBPF.tcp_out_bound_throughput.metric", a);
+      metricsRec.AddMember("event_type", "egressTCPThroughput", a);
+      metricsRec.AddMember("type", "count", a);
+      metricsRec.AddMember("value", uint64_t(item.second), a);
+      std::string addr_string = IPv4AddrToString(item.first.addr.in4.sin_addr).ConsumeValueOrDie() ;
+      rapidjson::Value attributes(rapidjson::kObjectType);
+      attributes.AddMember("remote-ip",  std::string(addr_string), a);
+      attributes.AddMember("remote-port",  item.first.addr.in4.sin_port, a);
+      attributes.AddMember("process", internal::StringRef(item.first.name), a);
+      metricsRec.AddMember("attributes", attributes, a);
+      addr_string = "";
+}
+
 void NetThroughputConnector::TransferDataImpl(ConnectorContext * /* ctx */ ) {
   DCHECK_EQ(data_tables_.size(), 1);
   DataTable * data_table = data_tables_[0];
@@ -75,24 +90,15 @@ void NetThroughputConnector::TransferDataImpl(ConnectorContext * /* ctx */ ) {
 
   rapidjson::Value data(rapidjson::kObjectType);
   rapidjson::Value metricsArray(rapidjson::kArrayType);
-  for (auto & item: items) {
+
+  for (auto& item : items) {
     if (item.first.addr.sa.sa_family == AF_INET) {
       rapidjson::Value metricsRec(rapidjson::kObjectType);
-      rapidjson::Value attributes(rapidjson::kObjectType);
-      metricsRec.AddMember("name", "eBPF.tcp_egress_throughput.metric", allocator);
-      metricsRec.AddMember("event_type", "egressTCPThroughput", allocator);
-      metricsRec.AddMember("type", "count", allocator);
-      metricsRec.AddMember("value", uint64_t(item.second), allocator);
-      std::string addr_string = IPv4AddrToString(item.first.addr.in4.sin_addr).ConsumeValueOrDie();
-      std::cout << "addr_string is " << addr_string << " and length is " << addr_string.length() << std::endl;
-      attributes.AddMember("remote-ip", std::string(addr_string), allocator);
-      attributes.AddMember("process", internal::StringRef(item.first.name), allocator);
-      metricsRec.AddMember("attributes", attributes, allocator);
-      metricsArray.PushBack(metricsRec, allocator);
-      addr_string = "";
-    } else {
-      std::cout << "IPv6 address" << std::endl;
-      continue;
+      AddRecHeaders(metricsRec, allocator, item);
+    }
+  else {
+     std::cout<< "IPv6 address" << std::endl;
+     continue ;
     }
   }
   data.AddMember("metrics", metricsArray, allocator);
