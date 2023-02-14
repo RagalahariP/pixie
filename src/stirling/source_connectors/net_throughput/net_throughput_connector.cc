@@ -25,6 +25,7 @@
 #include "src/common/base/inet_utils.h"
 
 BPF_SRC_STRVIEW(netthroughput_bcc_script, netthroughput);
+DEFINE_string(unspec, "UNSPEC", "IP is neither IPv4 nor IPv6");
 
 namespace px {
 namespace stirling {
@@ -33,7 +34,8 @@ namespace stirling {
 using ProbeType = bpf_tools::BPFProbeAttachType;
 const auto kProbeSpecs = MakeArray<bpf_tools::KProbeSpec>(
      {{"tcp_sendmsg", ProbeType::kEntry, "probe_entry_tcp_sendmsg", /*is_syscall*/ false},
-     {"tcp_sendmsg", ProbeType::kReturn, "probe_ret_tcp_sendmsg", /*is_syscall*/ false}});
+     {"tcp_sendmsg", ProbeType::kReturn, "probe_ret_tcp_sendmsg", /*is_syscall*/ false},
+     {"tcp_cleanup_rbuf", ProbeType::kEntry, "probe_entry_tcp_cleanup_rbuf", /*is_syscall*/ false}});
 
 Status NetThroughputConnector::InitImpl() {
   sampling_freq_mgr_.set_period(kSamplingPeriod);
@@ -50,26 +52,38 @@ Status NetThroughputConnector::StopImpl() {
   return Status::OK();
 }
 
+# if 0
 namespace internal {
 inline rapidjson::GenericStringRef<char> StringRef(std::string_view s) {
   return rapidjson::GenericStringRef<char>(s.data(), s.size());
 }
 }
+#endif
 
-
-void  AddRecHeaders(rapidjson::Value &metricsRec, rapidjson::Document::AllocatorType& a, std::pair<ip_key_t, uint64_t> item) {
+void  AddRecHeaders(rapidjson::Value &metricsRec, rapidjson::Document::AllocatorType& a,
+                    std::pair<ip_key_t, uint64_t> item, int family) {
+      std::string addr_string;
       metricsRec.AddMember("name", "eBPF.tcp_out_bound_throughput.metric", a);
       metricsRec.AddMember("event_type", "egressTCPThroughput", a);
       metricsRec.AddMember("type", "count", a);
       metricsRec.AddMember("value", uint64_t(item.second), a);
-      std::string addr_string = IPv4AddrToString(item.first.addr.in4.sin_addr).ConsumeValueOrDie() ;
       rapidjson::Value attributes(rapidjson::kObjectType);
+      if (family == AF_INET) {
+        addr_string = IPv4AddrToString(item.first.addr.in4.sin_addr).ConsumeValueOrDie();
+        attributes.AddMember("remote-port",  item.first.addr.in4.sin_port, a);
+      }
+      else if (family == AF_INET6) {
+        addr_string = IPv6AddrToString(item.first.addr.in6.sin6_addr).ConsumeValueOrDie();
+        attributes.AddMember("remote-port", item.first.addr.in6.sin6_port, a);
+      } else {
+        addr_string = FLAGS_unspec;
+      }
       attributes.AddMember("remote-ip",  std::string(addr_string), a);
-      attributes.AddMember("remote-port",  item.first.addr.in4.sin_port, a);
-      attributes.AddMember("process", internal::StringRef(item.first.name), a);
-      metricsRec.AddMember("attributes", attributes, a);
-      addr_string = "";
+      attributes.AddMember("process", std::string(item.first.name), a);
+      metricsRec.AddMember("attributes", attributes.Move(), a);
+      attributes.SetObject();
 }
+
 
 void NetThroughputConnector::TransferDataImpl(ConnectorContext * /* ctx */ ) {
   DCHECK_EQ(data_tables_.size(), 1);
@@ -92,26 +106,23 @@ void NetThroughputConnector::TransferDataImpl(ConnectorContext * /* ctx */ ) {
   rapidjson::Value metricsArray(rapidjson::kArrayType);
 
   for (auto& item : items) {
-    if (item.first.addr.sa.sa_family == AF_INET) {
       rapidjson::Value metricsRec(rapidjson::kObjectType);
-      AddRecHeaders(metricsRec, allocator, item);
-    }
-  else {
-     std::cout<< "IPv6 address" << std::endl;
-     continue ;
-    }
+      AddRecHeaders(metricsRec, allocator, item, item.first.addr.sa.sa_family);
+      metricsArray.PushBack(metricsRec.Move(), allocator);
+      metricsRec.SetObject();
   }
-  data.AddMember("metrics", metricsArray, allocator);
+
+  data.AddMember("metrics", metricsArray.Move(), allocator);
   document.AddMember("protocol_version", "4", allocator);
   rapidjson::Value dataArray(rapidjson::kArrayType);
-  dataArray.PushBack(data, allocator);
-  document.AddMember("data", dataArray, allocator);
+  dataArray.PushBack(data.Move(), allocator);
+  document.AddMember("data", dataArray.Move(), allocator);
 
   rapidjson::StringBuffer strbuf;
   rapidjson::Writer < rapidjson::StringBuffer > writer(strbuf);
   document.Accept(writer);
   std::cout << strbuf.GetString() << std::endl;
-
+  fflush(stdout);
 }
 }  // namespace stirling
 }  // namespace px

@@ -38,10 +38,11 @@ namespace stirling {
 // clang-format off
 static constexpr DataElement kNetTXElements[] = {
       canonical_data_elements_net::kRemoteAddr,
+      canonical_data_elements_net::kRemotePort,
       {"cmd", "Process command line",
        types::DataType::STRING, types::SemanticType::ST_NONE, types::PatternType::GENERAL},
       {"bytes_sent", "The number of bytes sent to the remote endpoint(s).",
-         types::DataType::INT64, types::SemanticType::ST_BYTES, types::PatternType::METRIC_GAUGE},
+         types::DataType::INT64, types::SemanticType::ST_BYTES, types::PatternType::METRIC_COUNTER},
 };
 
 

@@ -44,18 +44,19 @@ namespace stirling {
 class NetThroughputConnector : public SourceConnector, public bpf_tools::BCCWrapper {
  public:
   static constexpr std::string_view kName = "net_tx_throughput";
-  static constexpr auto kSamplingPeriod = std::chrono::milliseconds{1000};
-  static constexpr auto kPushPeriod = std::chrono::milliseconds{1000};
+  static constexpr auto kSamplingPeriod = std::chrono::milliseconds{20000};
+  static constexpr auto kPushPeriod = std::chrono::milliseconds{20000};
   static constexpr auto kTables = MakeArray(kNetTXStatsTable);
   static constexpr uint32_t kNetTXStatsTableNum = TableNum(kTables, kNetTXStatsTable);
   
   // clang-format off
   static constexpr DataElement kElements[] = {
       canonical_data_elements_net::kRemoteAddr,
+      canonical_data_elements_net::kRemotePort,
       {"cmd", "Process command line",
        types::DataType::STRING, types::SemanticType::ST_NONE, types::PatternType::GENERAL},
       {"bytes_sent", "The number of bytes sent to the remote endpoint(s).",
-         types::DataType::INT64, types::SemanticType::ST_BYTES, types::PatternType::METRIC_GAUGE},
+         types::DataType::INT64, types::SemanticType::ST_BYTES, types::PatternType::METRIC_COUNTER},
   };
 
   NetThroughputConnector() = delete;

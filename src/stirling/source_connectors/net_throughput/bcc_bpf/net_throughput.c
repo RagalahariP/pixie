@@ -23,16 +23,18 @@
 
 #include <linux/in6.h>
 #include <linux/net.h>
+//#include <linux/net.h>
+//#include <linux/tcp.h>
 #include <linux/socket.h>
 #include <net/inet_sock.h>
-
 #include "src/stirling/source_connectors/net_throughput/bcc_bpf_intf/net_throughput.h"
 #include "src/stirling/bpf_tools/bcc_bpf/utils.h"
 
 BPF_HASH(ipv4_send_bytes, struct ip_key_t);
-BPF_HASH(ipv4_recv_bytes, struct ip_key_t);
-BPF_HASH(ipv6_send_bytes, struct ip_key_t);
-BPF_HASH(ipv6_recv_bytes, struct ip_key_t);
+BPF_HASH(recv_bytes, struct ip_key_t);
+BPF_HASH(retrans, struct ip_key_t);
+//BPF_HASH(rtt, struct ip_key_t);
+//BPF_HASH(established, struct ip_key_t);
 BPF_HASH(sock_store, u32, struct sock *);
 
 static int tcp_sendstat(int size)
@@ -50,20 +52,20 @@ static int tcp_sendstat(int size)
     uint16_t family = -1;
     uint16_t port = -1;
 
-    BPF_PROBE_READ_KERNEL_VAR(port, &sk_common->skc_dport);
+   BPF_PROBE_READ_KERNEL_VAR(port, &sk_common->skc_dport);
  
-    BPF_PROBE_READ_KERNEL_VAR(family, &sk_common->skc_family);
-    //bpf_trace_printk("Family is %u", family)  ;
-    struct ip_key_t ip_key = {};
-    ip_key.addr.sa.sa_family = family;
+   BPF_PROBE_READ_KERNEL_VAR(family, &sk_common->skc_family);
+   struct ip_key_t ip_key = {};
+   ip_key.addr.sa.sa_family = family;
 
-    if (family == AF_INET) {
-       ip_key.addr.in4.sin_port = port;
+   if (family == AF_INET) {
+       ip_key.addr.in4.sin_port = ntohs(port);
         BPF_PROBE_READ_KERNEL_VAR(ip_key.addr.in4.sin_addr.s_addr, &sk_common->skc_daddr);
-    } else if (family == AF_INET6) {
-        ip_key.addr.in6.sin6_port = port;
+    //bpf_trace_printk("ip_key is %u and size %u", ip_key.addr.in4.sin_addr.s_addr, size)  ;
+   } else if (family == AF_INET6) {
+        ip_key.addr.in6.sin6_port = ntohs(port);
         BPF_PROBE_READ_KERNEL_VAR(ip_key.addr.in6.sin6_addr, &sk_common->skc_v6_daddr);
-    }
+   }
 
     bpf_get_current_comm(&ip_key.name, sizeof(ip_key.name));
     //ip_key.name = "test" ;
@@ -76,6 +78,7 @@ static int tcp_sendstat(int size)
 
 int probe_ret_tcp_sendmsg(struct pt_regs *ctx)
 {
+    bpf_trace_printk("I am here"); 
     int size = PT_REGS_RC(ctx);
     if (size > 0)
         return tcp_sendstat(size);
@@ -110,4 +113,61 @@ int probe_entry_tcp_sendmsg(struct pt_regs* ctx, struct sock *sk,
     struct msghdr *msg, size_t size) 
 {
   return tcp_send_entry(sk);
+}
+
+int probe_entry_tcp_cleanup_rbuf(struct pt_regs* ctx, struct sock *sk,
+    int copied) 
+{
+    u32 pid = bpf_get_current_pid_tgid() >> 32;
+    
+    if (copied <= 0)
+        return 0;
+    
+    uint16_t family = -1;
+    uint16_t port = -1;
+
+    BPF_PROBE_READ_KERNEL_VAR(port, &sk->__sk_common.skc_dport);
+    BPF_PROBE_READ_KERNEL_VAR(family, &sk->__sk_common.skc_family);
+    
+    struct ip_key_t ip_key = {};
+    ip_key.addr.sa.sa_family = family;
+
+    bpf_get_current_comm(&ip_key.name, sizeof(ip_key.name));
+    if (family == AF_INET) {
+        ip_key.addr.in4.sin_port = ntohs(port);
+        BPF_PROBE_READ_KERNEL_VAR(ip_key.addr.in4.sin_addr.s_addr, &sk->__sk_common.skc_daddr);
+    } else if (family == AF_INET6) {
+        ip_key.addr.in6.sin6_port = ntohs(port);
+        BPF_PROBE_READ_KERNEL_VAR(ip_key.addr.in6.sin6_addr, &sk->__sk_common.skc_v6_daddr);
+    }
+    recv_bytes.increment(ip_key, copied);
+    // else drop
+    return 0;
+}
+
+
+int probe_entry_tcp_retransmit_skb(struct pt_regs *ctx, struct sock *skp, struct sk_buff *skb, int type)
+{
+   if (skp == NULL)
+        return 0;
+
+    uint16_t family = -1;
+    uint16_t port = -1;
+
+    BPF_PROBE_READ_KERNEL_VAR(port, &skp->__sk_common.skc_dport);
+    BPF_PROBE_READ_KERNEL_VAR(family, &skp->__sk_common.skc_family);
+
+    struct ip_key_t ip_key = {};
+    ip_key.addr.sa.sa_family = family;
+
+    bpf_get_current_comm(&ip_key.name, sizeof(ip_key.name));
+    if (family == AF_INET) {
+        ip_key.addr.in4.sin_port = ntohs(port);
+        BPF_PROBE_READ_KERNEL_VAR(ip_key.addr.in4.sin_addr.s_addr, &skp->__sk_common.skc_daddr);
+    } else if (family == AF_INET6) {
+        ip_key.addr.in6.sin6_port = ntohs(port);
+        BPF_PROBE_READ_KERNEL_VAR(ip_key.addr.in6.sin6_addr, &skp->__sk_common.skc_v6_daddr);
+    }
+    retrans.increment(ip_key, 1);
+    return 0;
 }
