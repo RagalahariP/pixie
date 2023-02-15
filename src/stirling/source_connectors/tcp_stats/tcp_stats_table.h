@@ -41,7 +41,7 @@ static constexpr DataElement kTCPTXElements[] = {
       {"cmd", "Process command line",
        types::DataType::STRING, types::SemanticType::ST_NONE, types::PatternType::GENERAL},
       {"bytes_sent", "The number of bytes sent to the remote endpoint(s).",
-         types::DataType::INT64, types::SemanticType::ST_BYTES, types::PatternType::METRIC_COUNTER},
+         types::DataType::INT64, types::SemanticType::ST_BYTES, types::PatternType::METRIC_GAUGE},
 };
 
 static constexpr DataElement kTCPRXElements[] = {
@@ -49,7 +49,7 @@ static constexpr DataElement kTCPRXElements[] = {
       {"cmd", "Process command line",
        types::DataType::STRING, types::SemanticType::ST_NONE, types::PatternType::GENERAL},
       {"bytes_received", "The number of bytes received to the remote endpoint(s).",
-         types::DataType::INT64, types::SemanticType::ST_BYTES, types::PatternType::METRIC_COUNTER},
+         types::DataType::INT64, types::SemanticType::ST_BYTES, types::PatternType::METRIC_GAUGE},
 };
 
 static constexpr DataElement kTCPRetransElements[] = {
@@ -57,25 +57,25 @@ static constexpr DataElement kTCPRetransElements[] = {
       {"cmd", "Process command line",
        types::DataType::STRING, types::SemanticType::ST_NONE, types::PatternType::GENERAL},
       {"retrans", "The number of retransmissions to the remote endpoint(s).",
-         types::DataType::INT64, types::SemanticType::ST_NONE, types::PatternType::METRIC_COUNTER},
+         types::DataType::INT64, types::SemanticType::ST_NONE, types::PatternType::METRIC_GAUGE},
 };
 
 constexpr DataTableSchema kTCPTXStatsTable(
         "tcp_tx_stats",
         "TCP tx stats. This table contains statistics on the number of TCP bytes sent",
-        kTCPTXElements 
+        kTCPTXElements
 );
 
 constexpr DataTableSchema kTCPRXStatsTable(
         "tcp_rx_stats",
         "TCP rx stats. This table contains statistics on the number of TCP bytes received",
-        kTCPRXElements 
+        kTCPRXElements
 );
 
 constexpr DataTableSchema kTCPRetransStatsTable(
         "tcp_retrans_stats",
         "TCP retrans stats. This table contains statistics on the number of TCP retransmissions",
-        kTCPRetransElements 
+        kTCPRetransElements
 );
 
 }  // namespace stirling

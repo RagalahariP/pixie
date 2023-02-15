@@ -45,6 +45,6 @@ constexpr DataElement kRemotePort = {
 };
 // clang-format on
 
-}  // namespace canonical_data_elements
+}  // namespace canonical_data_elements_net
 }  // namespace stirling
 }  // namespace px

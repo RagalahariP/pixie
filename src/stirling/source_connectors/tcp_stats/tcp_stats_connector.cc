@@ -18,15 +18,14 @@
 
 #include "src/stirling/source_connectors/tcp_stats/tcp_stats_connector.h"
 
-#include <string>
 #include <arpa/inet.h>
+#include <string>
+#include <utility>
 #include "src/common/base/base.h"
 #include "src/stirling/bpf_tools/macros.h"
-#include "src/common/base/inet_utils.h"
 #include "src/stirling/source_connectors/tcp_stats/print_utils.h"
 
 BPF_SRC_STRVIEW(tcpstats_bcc_script, tcpstats);
-DEFINE_string(unspec, "UNSPEC", "IP is neither IPv4 nor IPv6");
 DEFINE_bool(JsonOutput, true, "Print on santdard in Json format");
 
 namespace px {
@@ -36,7 +35,8 @@ using ProbeType = bpf_tools::BPFProbeAttachType;
 const auto kProbeSpecs = MakeArray<bpf_tools::KProbeSpec>(
   {{"tcp_sendmsg", ProbeType::kEntry, "probe_entry_tcp_sendmsg", /*is_syscall*/ false},
    {"tcp_sendmsg", ProbeType::kReturn, "probe_ret_tcp_sendmsg", /*is_syscall*/ false},
-   {"tcp_cleanup_rbuf", ProbeType::kEntry, "probe_entry_tcp_cleanup_rbuf", /*is_syscall*/ false}});
+   {"tcp_cleanup_rbuf", ProbeType::kEntry, "probe_entry_tcp_cleanup_rbuf", /*is_syscall*/ false},
+   {"tcp_retransmit_skb", ProbeType::kEntry, "probe_entry_tcp_retransmit_skb", /*is_syscall*/ false}});
 
 
 Status TCPStatsConnector::InitImpl() {
@@ -54,91 +54,48 @@ Status TCPStatsConnector::StopImpl() {
   return Status::OK();
 }
 
-void AddRecHeaders(rapidjson::Document::AllocatorType& a,
-                   rapidjson::Value &metricsRec ,
-                   std::pair < ip_key_t, uint64_t > item,
-                   std::string name) {
-  std::string addr_string;
-  metricsRec.AddMember("name", name, a);
-  metricsRec.AddMember("event_type", json_type::tcp_stats, a);
-  metricsRec.AddMember("type", "count", a);
-  metricsRec.AddMember("value", uint64_t(item.second), a);
-  rapidjson::Value attributes(rapidjson::kObjectType);
-  int family = item.first.addr.sa.sa_family ;
-  if (family == AF_INET) {
-    addr_string = IPv4AddrToString(item.first.addr.in4.sin_addr).ConsumeValueOrDie();
-    attributes.AddMember("remote-port",  item.first.addr.in4.sin_port, a);
+void TCPStatsConnector::TransferDataImpl(ConnectorContext* /* ctx */) {
+  if ( FLAGS_JsonOutput != true ) {
+    /* TODO: Support other output formats */
+    return;
   }
-  else if (family == AF_INET6) {
-    addr_string = IPv6AddrToString(item.first.addr.in6.sin6_addr).ConsumeValueOrDie();
-    attributes.AddMember("remote-port", item.first.addr.in6.sin6_port, a);
-  } else {
-    addr_string = FLAGS_unspec;
-  }
-  attributes.AddMember("remote-ip",  std::string(addr_string), a);
-  attributes.AddMember("process", std::string(item.first.name), a);
-  metricsRec.AddMember("attributes", attributes.Move(), a);
-  attributes.SetObject();
-}
 
-void CreateRecords(rapidjson::Document::AllocatorType& a,
-                   rapidjson::Value &metricsArray,
-                   std::vector < std::pair < ip_key_t, uint64_t >> items,
-                   std::string name) {
-  for (auto& item : items) {
-    rapidjson::Value metricsRec(rapidjson::kObjectType);
-    AddRecHeaders(a, metricsRec, item, name);
-    metricsArray.PushBack(metricsRec.Move(), a);
-    metricsRec.SetObject();
-  }
-}
-
-void PrintRecordsInJson() { 
   rapidjson::Document document;
   document.SetObject();
-
-  rapidjson::Value object(rapidjson::kObjectType);
   rapidjson::Document::AllocatorType & allocator = document.GetAllocator();
-
-  rapidjson::Value data(rapidjson::kObjectType);
   rapidjson::Value metricsArray(rapidjson::kArrayType);
 
-  std::vector < std::pair < ip_key_t, uint64_t >> tx_items = bcc->GetHashTable< ip_key_t, uint64_t > ("sent_bytes").get_table_offline(); 
-  CreateRecords(allocator, metricsArray, tx_items, json_type::tx_metric);
-  
-  std::vector < std::pair < ip_key_t, uint64_t >> rx_items =
-    GetHashTable < ip_key_t, uint64_t > ("recv_bytes").get_table_offline();
-  CreateRecords(allocator, metricsArray, rx_items, json_type::rx_metric);
+  constexpr bool kClearTable = true;
 
-  std::vector < std::pair < ip_key_t, uint64_t >> retrans_items =
-    GetHashTable < ip_key_t, uint64_t > ("sent_bytes").get_table_offline();
-  CreateRecords(allocator, metricsArray, retrans_items, json_type::retrans_metric);
+  if (data_tables_[kTCPTXStatsTableNum] != nullptr) {
+    std::vector < std::pair < ip_key_t, uint64_t >> tx_items =
+     GetHashTable<ip_key_t, uint64_t>("sent_bytes").get_table_offline(kClearTable);
+    json_output::CreateRecords(allocator, metricsArray, tx_items, json_output::tx_metric);
+  }
 
-  data.AddMember("metrics", metricsArray.Move(), allocator);
-  document.AddMember("protocol_version", "4", allocator);
+  if (data_tables_[kTCPTXStatsTableNum] != nullptr) {
+     std::vector < std::pair < ip_key_t, uint64_t >> rx_items =
+       GetHashTable < ip_key_t, uint64_t > ("recv_bytes").get_table_offline(kClearTable);
+     json_output::CreateRecords(allocator, metricsArray, rx_items, json_output::rx_metric);
+  }
+
+  if (data_tables_[kTCPRetransStatsTableNum] != nullptr) {
+     std::vector < std::pair < ip_key_t, uint64_t >> retrans_items =
+       GetHashTable < ip_key_t, uint64_t > ("retrans").get_table_offline(kClearTable);
+     json_output::CreateRecords(allocator, metricsArray, retrans_items, json_output::retrans_metric);
+  }
+
+  rapidjson::Value data(rapidjson::kObjectType);
+  data.AddMember(json_output::StringRef(json_output::data_str), metricsArray.Move(), allocator);
+  document.AddMember(json_output::StringRef(json_output::version_str), json_output::StringRef(json_output::version_value), allocator);
   rapidjson::Value dataArray(rapidjson::kArrayType);
   dataArray.PushBack(data.Move(), allocator);
-  document.AddMember("data", dataArray.Move(), allocator);
+  document.AddMember(json_output::StringRef(json_output::data_str), dataArray.Move(), allocator);
 
   rapidjson::StringBuffer strbuf;
   rapidjson::Writer < rapidjson::StringBuffer > writer(strbuf);
   document.Accept(writer);
   std::cout << strbuf.GetString() << std::endl;
-}  
-
-void TCPStatsConnector::TransferDataImpl(ConnectorContext * /* ctx */ ) {
-  DCHECK_EQ(data_tables_.size(), 1);
-  DataTable * data_table = data_tables_[0];
-
-  if (data_table == nullptr) {
-    return;
-  }
-
-  if FLAGS_Json != true {
-    /* TODO: Support other output formats */
-    return;
-  }  
-  PrintRecordsInJson();
 }
 }  // namespace stirling
 }  // namespace px

@@ -60,8 +60,8 @@ enum class SourceConnectorGroup {
   // The stack trace profiler.
   kProfiler,
 
-  // The Nethrouput metrics.
-  kProdNetthroughput,
+  // The TCP conenction TX/RX/Retransmission metrics.
+  kProdTCPStats
 };
 
 /**

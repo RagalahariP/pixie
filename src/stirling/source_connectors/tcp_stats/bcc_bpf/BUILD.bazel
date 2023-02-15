@@ -34,7 +34,7 @@ tcp_stats_hdrs = [
 
 # Build :pidruntime_bpf_preprocess_genrule to examine the preprocessing output.
 pl_bpf_cc_resource(
-    name = "netthroughput",
+    name = "tcpstats",
     src = "tcp_stats.c",
     hdrs = tcp_stats_hdrs , 
     syshdrs = "//src/stirling/bpf_tools/bcc_bpf/system-headers",

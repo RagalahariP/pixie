@@ -28,14 +28,12 @@
 #include "src/stirling/core/types.h"
 #include "src/stirling/bpf_tools/bcc_wrapper.h"
 #include "src/stirling/core/source_connector.h"
-#include "src/stirling/source_connectors/tcp_stats/bcc_bpf_intf/tcp_stats.h"
 #include "src/stirling/source_connectors/tcp_stats/canonical_types.h"
 #include "src/stirling/utils/monitor.h"
 #include "src/common/base/base.h"
 #include "src/common/system/system.h"
 #include "src/shared/metadata/metadata.h"
 #include "src/stirling/core/canonical_types.h"
-#include "src/stirling/core/source_connector.h"
 #include "src/stirling/source_connectors/tcp_stats/tcp_stats_table.h"
 
 namespace px {
@@ -50,7 +48,7 @@ class TCPStatsConnector : public SourceConnector, public bpf_tools::BCCWrapper {
   static constexpr uint32_t kTCPTXStatsTableNum = TableNum(kTables, kTCPTXStatsTable);
   static constexpr uint32_t kTCPRXStatsTableNum = TableNum(kTables, kTCPRXStatsTable);
   static constexpr uint32_t kTCPRetransStatsTableNum = TableNum(kTables, kTCPRetransStatsTable);
-  
+
   TCPStatsConnector() = delete;
   ~TCPStatsConnector() override = default;
 
@@ -64,8 +62,7 @@ class TCPStatsConnector : public SourceConnector, public bpf_tools::BCCWrapper {
 
  protected:
   explicit TCPStatsConnector(std::string_view name)
-      : SourceConnector(name, kTables), bpf_tools::BCCWrapper() {} 
-
+      : SourceConnector(name, kTables), bpf_tools::BCCWrapper() {}
 };
 }  // namespace stirling
 }  // namespace px

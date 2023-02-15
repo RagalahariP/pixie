@@ -31,7 +31,7 @@ pl_cc_library(
         "//src/common/metrics:cc_library",
         "//src/stirling/bpf_tools:cc_library",
         "//src/stirling/core:cc_library",
-        "//src/stirling/source_connectors/tcp_stats/bcc_bpf:netthroughput",
+        "//src/stirling/source_connectors/tcp_stats/bcc_bpf:tcpstats",
         "//src/stirling/source_connectors/tcp_stats/bcc_bpf_intf:cc_library",
     ],
 )

@@ -58,11 +58,11 @@
 #include "src/stirling/source_connectors/socket_tracer/socket_trace_connector.h"
 #include "src/stirling/source_connectors/stirling_error/stirling_error_connector.h"
 #include "src/stirling/source_connectors/dynamic_tracer/dynamic_tracing/dynamic_tracer.h"
-#include "src/stirling/source_connectors/net_throughput/net_throughput_connector.h"
+#include "src/stirling/source_connectors/tcp_stats/tcp_stats_connector.h"
 
 DEFINE_string(
-    stirling_sources, gflags::StringFromEnv("PL_STIRLING_SOURCES", "kProdNetthroughput"),
-    "Choose sources to enable. [kAll|kProd|kMetrics|kTracers|kProfiler|kProdNetthroughput] or comma separated list of "
+    stirling_sources, gflags::StringFromEnv("PL_STIRLING_SOURCES", "kProdTCPStats"),
+    "Choose sources to enable. [kAll|kProd|kMetrics|kTracers|kProfiler|kProdTCPStats] or comma separated list of "
     "sources (find them the header files of source connector classes).");
 
 namespace px {
@@ -78,7 +78,7 @@ const std::vector<SourceRegistry::RegistryElement> kAllSources = {
     REGISTRY_PAIR(SocketTraceConnector),       REGISTRY_PAIR(ProcessStatsConnector),
     REGISTRY_PAIR(NetworkStatsConnector),      REGISTRY_PAIR(PerfProfileConnector),
     REGISTRY_PAIR(PIDCPUUseBPFTraceConnector), REGISTRY_PAIR(proc_exit_tracer::ProcExitConnector),
-    REGISTRY_PAIR(StirlingErrorConnector), REGISTRY_PAIR(NetThroughputConnector)
+    REGISTRY_PAIR(StirlingErrorConnector),     REGISTRY_PAIR(TCPStatsConnector)
 };
 #undef REGISTRY_PAIR
 
@@ -125,10 +125,9 @@ std::vector<std::string_view> GetSourceNamesForGroup(SourceConnectorGroup group)
       return {
         PerfProfileConnector::kName
       };
-    case SourceConnectorGroup::kProdNetthroughput:
-      std::cout << "Loading NetThroughputConnector " << std::endl; 
+    case SourceConnectorGroup::kProdTCPStats:
       return {
-       NetThroughputConnector::kName
+       TCPStatsConnector::kName
       };
     default:
       // To keep GCC happy.
@@ -601,6 +600,7 @@ void StirlingImpl::DestroyDynamicTraceConnector(sole::uuid trace_id) {
 void StirlingImpl::RegisterTracepoint(
     sole::uuid trace_id,
     std::unique_ptr<dynamic_tracing::ir::logical::TracepointDeployment> program) {
+  std::cout<<"I am here Temporary ";
   // Temporary: Check if the target exists on this PEM, otherwise return NotFound.
   // TODO(oazizi): Need to think of a better way of doing this.
   //               Need to differentiate errors caused by the binary not being on the host vs
@@ -614,6 +614,7 @@ void StirlingImpl::RegisterTracepoint(
                                     .output_table = ""};
   }
 
+  std::cout<<"I am here Temporary 2";
   if (program->has_deployment_spec()) {
     std::unique_ptr<ConnectorContext> conn_ctx = GetContext();
 
