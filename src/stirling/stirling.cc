@@ -61,7 +61,7 @@
 #include "src/stirling/source_connectors/tcp_stats/tcp_stats_connector.h"
 
 DEFINE_string(
-    stirling_sources, gflags::StringFromEnv("PL_STIRLING_SOURCES", "kProdTCPStats"),
+    stirling_sources, gflags::StringFromEnv("PL_STIRLING_SOURCES", "kProd"),
     "Choose sources to enable. [kAll|kProd|kMetrics|kTracers|kProfiler|kProdTCPStats] or comma separated list of "
     "sources (find them the header files of source connector classes).");
 
@@ -600,7 +600,6 @@ void StirlingImpl::DestroyDynamicTraceConnector(sole::uuid trace_id) {
 void StirlingImpl::RegisterTracepoint(
     sole::uuid trace_id,
     std::unique_ptr<dynamic_tracing::ir::logical::TracepointDeployment> program) {
-  std::cout<<"I am here Temporary ";
   // Temporary: Check if the target exists on this PEM, otherwise return NotFound.
   // TODO(oazizi): Need to think of a better way of doing this.
   //               Need to differentiate errors caused by the binary not being on the host vs
@@ -614,7 +613,6 @@ void StirlingImpl::RegisterTracepoint(
                                     .output_table = ""};
   }
 
-  std::cout<<"I am here Temporary 2";
   if (program->has_deployment_spec()) {
     std::unique_ptr<ConnectorContext> conn_ctx = GetContext();
 
