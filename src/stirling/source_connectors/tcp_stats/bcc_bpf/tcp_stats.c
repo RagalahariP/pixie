@@ -24,6 +24,7 @@
 #include <linux/in6.h>
 #include <linux/net.h>
 #include <linux/socket.h>
+#include <linux/tcp.h>
 #include <net/inet_sock.h>
 #include "src/stirling/source_connectors/tcp_stats/bcc_bpf_intf/tcp_stats.h"
 #include "src/stirling/bpf_tools/bcc_bpf/utils.h"
@@ -44,6 +45,12 @@ BPF_HASH(retrans, struct ip_key_t);
 // Key is {tid}.
 BPF_HASH(sock_store, u32, struct sock *);
 
+
+// Map to indicate TCP Latency.
+// Key is {remoteIP & port}.
+BPF_HASH(latency, struct latency_key_t, struct sock_latency_t);
+
+BPF_HISTOGRAM(latency_histogram, struct socket_key_t);
 
 static int tcp_sendstat(int size) {
   u32 pid = bpf_get_current_pid_tgid() >> 32;
@@ -163,4 +170,58 @@ int probe_entry_tcp_retransmit_skb(struct pt_regs *ctx, struct sock *skp, struct
   }
   retrans.increment(ip_key, 1);
   return 0;
+}
+
+
+int probe_entry_tcp_rcv_established(struct pt_regs *ctx, struct sock *sk, struct sk_buff *skb) {
+  struct tcp_sock *ts = tcp_sk(sk);
+  u32 srtt = (ts->srtt_us >> 3) / 1000 ;
+
+  bpf_trace_printk("ts->srtt_us >> 3 %u ", ts->srtt_us >> 3); 
+  uint16_t family = -1;
+  uint16_t dport = -1;
+  uint16_t sport = -1;
+
+  BPF_PROBE_READ_KERNEL_VAR(dport, &sk->__sk_common.skc_dport);
+  BPF_PROBE_READ_KERNEL_VAR(family, &sk->__sk_common.skc_family);
+  BPF_PROBE_READ_KERNEL_VAR(sport, &sk->__sk_common.skc_num);
+  struct latency_key_t latency_key = {};
+  struct socket_key_t sock_key = {};
+  
+  latency_key.saddr.sa.sa_family = family;
+  latency_key.daddr.sa.sa_family = family;
+
+  sock_key.daddr.sa.sa_family = family;
+
+  if (family == AF_INET) {
+    latency_key.daddr.in4.sin_port = ntohs(dport);
+    latency_key.saddr.in4.sin_port = sport;
+    BPF_PROBE_READ_KERNEL_VAR(latency_key.daddr.in4.sin_addr.s_addr, &sk->__sk_common.skc_daddr);
+    BPF_PROBE_READ_KERNEL_VAR(latency_key.saddr.in4.sin_addr.s_addr, &sk->__sk_common.skc_rcv_saddr);
+    sock_key.daddr.in4.sin_port = ntohs(dport);
+    BPF_PROBE_READ_KERNEL_VAR(sock_key.daddr.in4.sin_addr.s_addr, &sk->__sk_common.skc_daddr);
+  } else if (family == AF_INET6) {
+    latency_key.daddr.in6.sin6_port = ntohs(dport);
+    latency_key.saddr.in6.sin6_port = sport;
+    BPF_PROBE_READ_KERNEL_VAR(latency_key.daddr.in6.sin6_addr, &sk->__sk_common.skc_v6_daddr);
+    BPF_PROBE_READ_KERNEL_VAR(latency_key.saddr.in6.sin6_addr, &sk->__sk_common.skc_v6_rcv_saddr);
+    sock_key.daddr.in6.sin6_port = ntohs(dport);
+    BPF_PROBE_READ_KERNEL_VAR(sock_key.daddr.in6.sin6_addr, &sk->__sk_common.skc_v6_daddr);
+  }
+
+  struct sock_latency_t newlat = {0};
+  struct sock_latency_t *lat;
+  lat = latency.lookup(&latency_key);
+  if (lat != NULL) {
+      newlat.latency += srtt ;
+      newlat.count += 1; 
+      latency.update(&latency_key, &newlat);
+  } else {
+       lat->latency +=srtt;
+       lat->count += 1;
+  }
+ 
+  sock_key.slot = bpf_log2l(srtt);
+  latency_histogram.atomic_increment(sock_key);
+  return 0; 
 }

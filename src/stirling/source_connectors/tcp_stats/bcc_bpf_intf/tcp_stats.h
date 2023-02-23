@@ -32,3 +32,20 @@ struct ip_key_t {
     // IP address of the remote endpoint.
     union sockaddress_t addr;
 };
+
+struct latency_key_t {
+    // IP address of the local endpoint
+    union sockaddress_t saddr;
+    // IP address of the remote endpoint.
+    union sockaddress_t daddr;
+};
+
+struct sock_latency_t {
+    uint64_t latency;
+    uint64_t count;
+};
+
+struct socket_key_t {
+    union sockaddress_t daddr;
+    uint64_t slot;
+};

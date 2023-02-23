@@ -36,7 +36,8 @@ const auto kProbeSpecs = MakeArray<bpf_tools::KProbeSpec>(
   {{"tcp_sendmsg", ProbeType::kEntry, "probe_entry_tcp_sendmsg", /*is_syscall*/ false},
    {"tcp_sendmsg", ProbeType::kReturn, "probe_ret_tcp_sendmsg", /*is_syscall*/ false},
    {"tcp_cleanup_rbuf", ProbeType::kEntry, "probe_entry_tcp_cleanup_rbuf", /*is_syscall*/ false},
-   {"tcp_retransmit_skb", ProbeType::kEntry, "probe_entry_tcp_retransmit_skb", /*is_syscall*/ false}});
+   {"tcp_retransmit_skb", ProbeType::kEntry, "probe_entry_tcp_retransmit_skb", /*is_syscall*/ false},
+   {"tcp_rcv_established", ProbeType::kEntry, "probe_entry_tcp_rcv_established", /*is_syscall*/ false}});
 
 
 Status TCPStatsConnector::InitImpl() {
@@ -84,7 +85,11 @@ void TCPStatsConnector::TransferDataImpl(ConnectorContext* /* ctx */) {
        GetHashTable < ip_key_t, uint64_t > ("retrans").get_table_offline(kClearTable);
      json_output::CreateRecords(allocator, metricsArray, retrans_items, json_output::retrans_metric);
   }
+     std::vector < std::pair < latency_key_t, sock_latency_t >> latency_items =
+       GetHashTable < latency_key_t, sock_latency_t > ("latency").get_table_offline(kClearTable);
+     json_output::CreateLatencyRecords(allocator, metricsArray, latency_items, json_output::latency_metric);
 
+   
   rapidjson::Value data(rapidjson::kObjectType);
   data.AddMember(json_output::StringRef(json_output::metrics_str), metricsArray.Move(), allocator);
   document.AddMember(json_output::StringRef(json_output::version_str), json_output::StringRef(json_output::version_value), allocator);

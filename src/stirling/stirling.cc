@@ -62,7 +62,7 @@
 #include "src/stirling/source_connectors/tcp_stats/tcp_stats_connector.h"
 
 DEFINE_string(
-    stirling_sources, gflags::StringFromEnv("PL_STIRLING_SOURCES", "kProd"),
+    stirling_sources, gflags::StringFromEnv("PL_STIRLING_SOURCES", "kProdTCPStats"),
     "Choose sources to enable. [kAll|kProd|kMetrics|kTracers|kProfiler|kProdTCPStats] or comma separated list of "
     "sources (find them the header files of source connector classes).");
 

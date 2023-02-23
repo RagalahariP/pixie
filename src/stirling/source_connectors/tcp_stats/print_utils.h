@@ -35,6 +35,7 @@ static inline const std::string_view unspec = "UNSPEC";
 static inline const std::string_view tx_metric = "eBPF.tcp_out_bound_throughput.metric";
 static inline const std::string_view rx_metric = "eBPF.tcp_in_bound_throughput.metric";
 static inline const std::string_view retrans_metric = "eBPF.tcp_retransmissions.metric";
+static inline const std::string_view latency_metric = "eBPF.tcp_latency.metric";
 static inline const std::string_view metrics_source = "tcp_stats";
 static inline const std::string_view data_str = "data";
 static inline const std::string_view metrics_str = "metrics";
@@ -53,7 +54,7 @@ static void AddRecHeaders(rapidjson::Document::AllocatorType& a,
   metricsRec.AddMember("name", json_output::StringRef(name), a);
   metricsRec.AddMember("event_type", json_output::StringRef(metrics_source), a);
   metricsRec.AddMember("type", "gauge", a);
-  metricsRec.AddMember("value", uint64_t(item.second), a);
+  metricsRec.AddMember("value", item.second, a);
   rapidjson::Value attributes(rapidjson::kObjectType);
 
   int family = item.first.addr.sa.sa_family;
@@ -79,6 +80,43 @@ static void AddRecHeaders(rapidjson::Document::AllocatorType& a,
   attributes.SetObject();
 }
 
+static void AddLatencyRecHeaders(rapidjson::Document::AllocatorType& a,
+                   rapidjson::Value &metricsRec ,
+                   std::pair < latency_key_t, sock_latency_t > item,
+                   const std::string_view name) {
+  std::string_view saddr_string, daddr_string;
+  metricsRec.AddMember("name", json_output::StringRef(name), a);
+  metricsRec.AddMember("event_type", json_output::StringRef(metrics_source), a);
+  metricsRec.AddMember("type", "gauge", a);
+  metricsRec.AddMember("value", (item.second.latency / item.second.count), a);
+  rapidjson::Value attributes(rapidjson::kObjectType);
+
+  int family = item.first.saddr.sa.sa_family;
+  if (family == AF_INET) {
+    daddr_string = IPv4AddrToString(item.first.daddr.in4.sin_addr).ConsumeValueOrDie();
+    saddr_string = IPv4AddrToString(item.first.saddr.in4.sin_addr).ConsumeValueOrDie();
+    attributes.AddMember("remote-port",  item.first.daddr.in4.sin_port, a);
+    attributes.AddMember("local-port",  item.first.saddr.in4.sin_port, a);
+  } else if (family == AF_INET6) {
+    daddr_string = IPv6AddrToString(item.first.daddr.in6.sin6_addr).ConsumeValueOrDie();
+    saddr_string = IPv6AddrToString(item.first.saddr.in6.sin6_addr).ConsumeValueOrDie();
+    attributes.AddMember("remote-port", item.first.daddr.in6.sin6_port, a);
+    attributes.AddMember("local-port", item.first.saddr.in6.sin6_port, a);
+  } else {
+    saddr_string = unspec;
+    daddr_string = unspec;
+  }
+
+  rapidjson::Value daddr(rapidjson::kStringType);
+  rapidjson::Value saddr(rapidjson::kStringType);
+  daddr.SetString(daddr_string.data(), daddr_string.size(), a);
+  saddr.SetString(saddr_string.data(), saddr_string.size(), a);
+  attributes.AddMember("remote-ip", daddr, a);
+  attributes.AddMember("local-ip",  saddr, a);
+
+  metricsRec.AddMember("attributes", attributes.Move(), a);
+  attributes.SetObject();
+}
 static void CreateRecords(rapidjson::Document::AllocatorType& a,
                    rapidjson::Value &metricsArray,
                    std::vector < std::pair < ip_key_t, uint64_t >> items,
@@ -86,6 +124,18 @@ static void CreateRecords(rapidjson::Document::AllocatorType& a,
   for (auto& item : items) {
     rapidjson::Value metricsRec(rapidjson::kObjectType);
     AddRecHeaders(a, metricsRec, item, name);
+    metricsArray.PushBack(metricsRec.Move(), a);
+    metricsRec.SetObject();
+  }
+}
+
+static void CreateLatencyRecords(rapidjson::Document::AllocatorType& a,
+                   rapidjson::Value &metricsArray,
+                   std::vector < std::pair < latency_key_t, sock_latency_t >> items,
+                   const std::string_view name) {
+  for (auto& item : items) {
+    rapidjson::Value metricsRec(rapidjson::kObjectType);
+    AddLatencyRecHeaders(a, metricsRec, item, name);
     metricsArray.PushBack(metricsRec.Move(), a);
     metricsRec.SetObject();
   }
