@@ -30,21 +30,42 @@ DEFINE_bool(JsonOutput, true, "Standard output in Json format");
 
 namespace px {
 namespace stirling {
-
+constexpr uint32_t kPerfBufferPerCPUSizeBytes = 200 * 1024 ;
 using ProbeType = bpf_tools::BPFProbeAttachType;
 const auto kProbeSpecs = MakeArray<bpf_tools::KProbeSpec>(
   {{"tcp_sendmsg", ProbeType::kEntry, "probe_entry_tcp_sendmsg", /*is_syscall*/ false},
    {"tcp_sendmsg", ProbeType::kReturn, "probe_ret_tcp_sendmsg", /*is_syscall*/ false},
    {"tcp_cleanup_rbuf", ProbeType::kEntry, "probe_entry_tcp_cleanup_rbuf", /*is_syscall*/ false},
    {"tcp_retransmit_skb", ProbeType::kEntry, "probe_entry_tcp_retransmit_skb", /*is_syscall*/ false},
+//   {"execve", ProbeType::kEntry, "syscall__probe_entry_execv", true},
+   {"execve", ProbeType::kReturn, "syscall__probe_ret_execv", true},
    {"tcp_rcv_established", ProbeType::kEntry, "probe_entry_tcp_rcv_established", /*is_syscall*/ false}});
 
+void HandleTcpEvent(void* cb_cookie, void* data, int /*data_size*/) {
+  auto* connector = reinterpret_cast<TCPStatsConnector*>(cb_cookie);
+  auto* event = reinterpret_cast<struct data_t*>(data);
+  connector->AcceptTcpEvent(*event);
+}
+
+void TCPStatsConnector::AcceptTcpEvent(const struct data_t& event) {
+  events_.push_back(event);
+}
+
+void HandleTcpEventLoss(void* /*cb_cookie*/, uint64_t /*lost*/) {
+  // TODO(RagalahariP): Add stats counter.
+}
+
+const auto kPerfBufferSpecs = MakeArray<bpf_tools::PerfBufferSpec>({
+    {"events", HandleTcpEvent, HandleTcpEventLoss, kPerfBufferPerCPUSizeBytes,
+     bpf_tools::PerfBufferSizeCategory::kData},
+});
 
 Status TCPStatsConnector::InitImpl() {
   sampling_freq_mgr_.set_period(kSamplingPeriod);
   push_freq_mgr_.set_period(kPushPeriod);
   PX_RETURN_IF_ERROR(InitBPFProgram(tcpstats_bcc_script));
   PX_RETURN_IF_ERROR(AttachKProbes(kProbeSpecs));
+    PX_RETURN_IF_ERROR(OpenPerfBuffers(kPerfBufferSpecs, this));
   LOG(INFO) << absl::Substitute("Number of kprobes deployed = $0", kProbeSpecs.size());
   LOG(INFO) << "Probes successfully deployed.";
   return Status::OK();
@@ -65,6 +86,7 @@ void TCPStatsConnector::TransferDataImpl(ConnectorContext* /* ctx */) {
   document.SetObject();
   rapidjson::Document::AllocatorType & allocator = document.GetAllocator();
   rapidjson::Value metricsArray(rapidjson::kArrayType);
+  rapidjson::Value eventsArray(rapidjson::kArrayType);
 
   constexpr bool kClearTable = true;
 
@@ -89,9 +111,13 @@ void TCPStatsConnector::TransferDataImpl(ConnectorContext* /* ctx */) {
        GetHashTable < latency_key_t, sock_latency_t > ("latency").get_table_offline(kClearTable);
      json_output::CreateLatencyRecords(allocator, metricsArray, latency_items, json_output::latency_metric);
 
-   
+  PollPerfBuffers();
+
+  json_output::CreatePerfRecords(allocator, eventsArray, events_);
+
   rapidjson::Value data(rapidjson::kObjectType);
   data.AddMember(json_output::StringRef(json_output::metrics_str), metricsArray.Move(), allocator);
+  data.AddMember(json_output::StringRef(json_output::events_str), eventsArray.Move(), allocator);
   document.AddMember(json_output::StringRef(json_output::version_str), json_output::StringRef(json_output::version_value), allocator);
   rapidjson::Value dataArray(rapidjson::kArrayType);
   dataArray.PushBack(data.Move(), allocator);
@@ -101,6 +127,7 @@ void TCPStatsConnector::TransferDataImpl(ConnectorContext* /* ctx */) {
   rapidjson::Writer < rapidjson::StringBuffer > writer(strbuf);
   document.Accept(writer);
   std::cout << strbuf.GetString() << std::endl;
+  events_.clear();
 }
 }  // namespace stirling
 }  // namespace px

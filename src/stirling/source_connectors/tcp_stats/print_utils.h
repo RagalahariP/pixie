@@ -39,6 +39,7 @@ static inline const std::string_view latency_metric = "eBPF.tcp_latency.metric";
 static inline const std::string_view metrics_source = "tcp_stats";
 static inline const std::string_view data_str = "data";
 static inline const std::string_view metrics_str = "metrics";
+static inline const std::string_view events_str = "events";
 static inline const std::string_view version_str = "protocol_version";
 static inline const std::string_view version_value = "4";
 
@@ -129,6 +130,54 @@ static void CreateRecords(rapidjson::Document::AllocatorType& a,
   }
 }
 
+static void AddPerfRecHeaders(rapidjson::Document::AllocatorType& a, rapidjson::Value& eventsRec,
+                              data_t item) {
+
+ // std::cout<<"I am in AddPerfRecHeaders \n";
+  eventsRec.AddMember("summary", "New process triggered", a);
+  eventsRec.AddMember("category", "processStats", a);
+
+  rapidjson::Value attributes(rapidjson::kObjectType);
+  std::string process = item.comm;
+  rapidjson::Value pname(rapidjson::kStringType);
+  pname.SetString(process.data(), process.size(), a);
+  attributes.AddMember("process", pname, a);
+  attributes.AddMember("returnVal", item.retval, a);
+  //if (item.type == 0) {
+  //    attributes.AddMember("args",  std::string(item.argv[0]), a);
+ // }
+  eventsRec.AddMember("attributes", attributes.Move(), a);
+  attributes.SetObject();
+  #if 0
+  eventsRec.AddMember("type", "gauge", a);
+  eventsRec.AddMember("value", 1, a);
+  rapidjson::Value attributes(rapidjson::kObjectType);
+
+    attributes.AddMember("pid", item.pid, a);
+  attributes.AddMember("returnVal", item.retval, a);
+  if (item.type == 0) {
+      attributes.AddMember("args", item.argv[0], a);
+  }
+  std::string process = item.comm;
+  rapidjson::Value pname(rapidjson::kStringType);
+  pname.SetString(process.data(), process.size(), a);
+  attributes.AddMember("process", pname, a);
+  eventsRec.AddMember("attributes", attributes.Move(), a);
+  attributes.SetObject();
+  #endif
+}
+
+static void CreatePerfRecords(rapidjson::Document::AllocatorType& a, rapidjson::Value& eventsArray,
+                              std::vector<data_t> items) {
+  //std::cout<<"I am here in CreatePerfRecords \n";
+  for (auto& item : items) {
+  //std::cout<<"I am here in in for loop in CreatePerfRecords \n";
+    rapidjson::Value eventsRec(rapidjson::kObjectType);
+    AddPerfRecHeaders(a, eventsRec, item);
+    eventsArray.PushBack(eventsRec.Move(), a);
+    eventsRec.SetObject();
+  }
+}
 static void CreateLatencyRecords(rapidjson::Document::AllocatorType& a,
                    rapidjson::Value &metricsArray,
                    std::vector < std::pair < latency_key_t, sock_latency_t >> items,

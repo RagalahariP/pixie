@@ -59,10 +59,13 @@ class TCPStatsConnector : public SourceConnector, public bpf_tools::BCCWrapper {
   Status InitImpl() override;
   Status StopImpl() override;
   void TransferDataImpl(ConnectorContext* ctx) override;
+   void AcceptTcpEvent(const struct data_t& event);
 
  protected:
   explicit TCPStatsConnector(std::string_view name)
       : SourceConnector(name, kTables), bpf_tools::BCCWrapper() {}
+ private:
+  std::vector<struct data_t> events_;
 };
 }  // namespace stirling
 }  // namespace px

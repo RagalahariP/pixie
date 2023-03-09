@@ -30,6 +30,8 @@
 #include "src/stirling/bpf_tools/bcc_bpf/utils.h"
 
 
+#define MAXARG 10
+
 // Map to indicate number of TCP bytes sent.
 // Key is {remoteIP & process name} */
 BPF_HASH(sent_bytes, struct ip_key_t);
@@ -45,6 +47,7 @@ BPF_HASH(retrans, struct ip_key_t);
 // Key is {tid}.
 BPF_HASH(sock_store, u32, struct sock *);
 
+BPF_PERF_OUTPUT(events);
 
 // Map to indicate TCP Latency.
 // Key is {remoteIP & port}.
@@ -177,7 +180,7 @@ int probe_entry_tcp_rcv_established(struct pt_regs *ctx, struct sock *sk, struct
   struct tcp_sock *ts = tcp_sk(sk);
   u32 srtt = (ts->srtt_us >> 3) / 1000 ;
 
-  bpf_trace_printk("ts->srtt_us >> 3 %u ", ts->srtt_us >> 3); 
+  //bpf_trace_printk("ts->srtt_us >> 3 %u ", ts->srtt_us >> 3); 
   uint16_t family = -1;
   uint16_t dport = -1;
   uint16_t sport = -1;
@@ -224,4 +227,71 @@ int probe_entry_tcp_rcv_established(struct pt_regs *ctx, struct sock *sk, struct
   sock_key.slot = bpf_log2l(srtt);
   latency_histogram.atomic_increment(sock_key);
   return 0; 
+}
+
+static int __submit_arg(struct pt_regs *ctx, void *ptr, struct data_t *data)
+{
+    bpf_probe_read_user(data->argv, sizeof(data->argv), ptr);
+    events.perf_submit(ctx, data, sizeof(struct data_t));
+    return 1;
+}
+static int submit_arg(struct pt_regs *ctx, void *ptr, struct data_t *data)
+{
+    const char *argp = NULL;
+    bpf_probe_read_user(&argp, sizeof(argp), ptr);
+    if (argp) {
+        return __submit_arg(ctx, (void *)(argp), data);
+    }
+    return 0;
+}
+
+int syscall__probe_entry_execv(struct pt_regs* ctx,
+                               const char __user *filename,
+    const char __user *const __user *__argv,
+    const char __user *const __user *__envp ) {
+   //bpf_trace_printk("I am here in entry");
+    u32 uid = bpf_get_current_uid_gid() & 0xffffffff;
+    // create data here and pass to submit_arg to save stack space (#555)
+    struct data_t data = {};
+    struct task_struct *task;
+    data.pid = bpf_get_current_pid_tgid() >> 32;
+    task = (struct task_struct *)bpf_get_current_task();
+    // Some kernels, like Ubuntu 4.13.0-generic, return 0
+    // as the real_parent->tgid.
+    // We use the get_ppid function as a fallback in those cases. (#1883)
+    data.ppid = task->real_parent->tgid;
+    bpf_get_current_comm(&data.comm, sizeof(data.comm));
+    data.type = EVENT_ARG;
+    __submit_arg(ctx, (void *)filename, &data);
+    #pragma unroll
+    for (int i = 1; i < MAXARG; i++) {
+        //bpf_trace_printk("argv[i] %s", __argv[i]);
+        if (submit_arg(ctx, (void *)&__argv[i], &data) == 0)
+             return 0;
+    }
+    // handle truncated argument list
+    char ellipsis[] = "...";
+    __submit_arg(ctx, (void *)ellipsis, &data);
+    bpf_trace_printk("data %s", data.argv[0]);
+    return 0;
+}
+
+int syscall__probe_ret_execv(struct pt_regs* ctx) {
+   //bpf_trace_printk("I am here in exit");
+    struct data_t data = {};
+    struct task_struct *task;
+    u32 uid = bpf_get_current_uid_gid() & 0xffffffff;
+    data.pid = bpf_get_current_pid_tgid() >> 32;
+    data.uid = uid;
+    task = (struct task_struct *)bpf_get_current_task();
+    // Some kernels, like Ubuntu 4.13.0-generic, return 0
+    // as the real_parent->tgid.
+    // We use the get_ppid function as a fallback in those cases. (#1883)
+    data.ppid = task->real_parent->tgid;
+    bpf_get_current_comm(&data.comm, sizeof(data.comm));
+    data.type = EVENT_RET;
+    data.retval = PT_REGS_RC(ctx);
+    //bpf_trace_printk("Updating events ret value");
+     events.perf_submit(ctx, &data, sizeof(data));
+    return 0;
 }

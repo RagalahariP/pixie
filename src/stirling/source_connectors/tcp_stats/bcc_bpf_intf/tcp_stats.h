@@ -19,6 +19,7 @@
 #pragma once
 
 #define MAX_CMD_SIZE 32
+#define ARGSIZE  128
 
 union sockaddress_t {
   struct sockaddr sa;
@@ -48,4 +49,20 @@ struct sock_latency_t {
 struct socket_key_t {
     union sockaddress_t daddr;
     uint64_t slot;
+};
+
+enum event_type {
+    EVENT_ARG,
+    EVENT_RET,
+};
+
+
+struct data_t {
+    uint32_t pid;  // PID as in the userspace term (i.e. task->tgid in kernel)
+    uint32_t ppid; // Parent PID as in the userspace term (i.e task->real_parent->tgid in kernel)
+    uint32_t uid;
+    char comm[MAX_CMD_SIZE];
+    enum event_type type;
+    char argv[ARGSIZE];
+    int retval;
 };
