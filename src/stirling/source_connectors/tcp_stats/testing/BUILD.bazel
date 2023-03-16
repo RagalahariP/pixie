@@ -14,53 +14,27 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-load("//bazel:pl_build_system.bzl", "pl_cc_library", "pl_cc_test")
+load("//bazel:pl_build_system.bzl", "pl_cc_test_library")
 
 package(default_visibility = ["//src/stirling:__subpackages__"])
 
-pl_cc_library(
+pl_cc_test_library(
     name = "cc_library",
     srcs = glob(
         ["*.cc"],
-        exclude = [
-            "**/*_test.cc",
-        ],
     ),
-    hdrs = glob(["*.h"]),
-    deps = [
-        "//src/stirling/bpf_tools:cc_library",
-        "//src/stirling/core:cc_library",
-        "//src/stirling/source_connectors/tcp_stats/bcc_bpf:tcpstats",
-        "//src/stirling/source_connectors/tcp_stats/bcc_bpf_intf:cc_library",
-    ],
-)
-
-pl_cc_test(
-    name = "tcp_stats_connector_test",
-    srcs = ["tcp_stats_connector_test.cc"],
+    hdrs = glob(
+        ["*.h"],
+    ),
     tags = [
         "requires_bpf",
     ],
     deps = [
-        ":cc_library",
-        "//src/stirling/testing:cc_library",
-    ],
-)
-
-pl_cc_test(
-    name = "tcp_stats_bpf_test",
-    timeout = "long",
-    srcs = ["tcp_stats_bpf_test.cc"],
-    flaky = True,
-    shard_count = 5,
-    tags = [
-        "cpu:16",
-        "requires_bpf",
-    ],
-    deps = [
-        ":cc_library",
-        "//src/stirling/source_connectors/tcp_stats/testing:cc_library",
+        "//src/common/system:cc_library",
         "//src/common/testing/test_utils:cc_library",
+        "//src/shared/types:cc_library",
+        "//src/stirling/source_connectors/tcp_stats:cc_library",
         "//src/stirling/testing:cc_library",
     ],
 )
+
