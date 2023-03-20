@@ -41,9 +41,7 @@ class TcpTraceBPFTestFixture : public ::testing::Test {
     source_.reset(dynamic_cast<TCPStatsConnector*>(source_connector.release()));
     ASSERT_OK(source_->Init());
     source_->set_data_tables(data_tables_.tables());
-    upid = md::UPID(1, 100, 23123);
-    upids.insert(upid);
-    ctx_ = std::make_unique<StandaloneContext>(upids);
+    ctx_ = std::make_unique<SystemWideStandaloneContext>();
   }
 
   void TearDown() override { ASSERT_OK(source_->Stop()); }
@@ -59,7 +57,7 @@ class TcpTraceBPFTestFixture : public ::testing::Test {
       transfer_enable_ = true;
       while (transfer_enable_) {
         {
-          RefreshContext(upids);
+          RefreshContext();
           source_->TransferData(ctx_.get());
         }
         std::this_thread::sleep_for(kTransferDataPeriod);
@@ -87,22 +85,19 @@ class TcpTraceBPFTestFixture : public ::testing::Test {
     return source_->data_tables()[table_num]->ConsumeRecords();
   }
 
-  md::UPID getUpid() { return upid; }
-
-  void RefreshContext(const absl::flat_hash_set<md::UPID>& upids) {
+  void RefreshContext() {
     absl::base_internal::SpinLockHolder lock(&tcp_stats_state_lock_);
-    ctx_ = std::make_unique<StandaloneContext>(upids);
+    ctx_ = std::make_unique<SystemWideStandaloneContext>();
   }
-  static constexpr int kTcpstatsTableNum = TCPStatsConnector::kTCPStatsTableNum;
 
+  static constexpr int kTcpstatsTableNum = TCPStatsConnector::kTCPStatsTableNum;
+  testing::DataTables data_tables_{TCPStatsConnector::kTables};
+  DataTable* tcp_stats_table_ = data_tables_[kTcpstatsTableNum];
   absl::base_internal::SpinLock tcp_stats_state_lock_;
-  md::UPID upid;
   std::unique_ptr<TCPStatsConnector> source_;
   std::atomic<bool> transfer_enable_ = false;
-  std::unique_ptr<StandaloneContext> ctx_;
-  absl::flat_hash_set<md::UPID> upids;
+  std::unique_ptr<SystemWideStandaloneContext> ctx_;
   std::thread transfer_data_thread_;
-  DataTables data_tables_{TCPStatsConnector::kTables};
   static constexpr std::chrono::milliseconds kTransferDataPeriod{100};
 };
 
