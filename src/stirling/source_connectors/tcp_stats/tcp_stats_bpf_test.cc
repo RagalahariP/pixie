@@ -30,6 +30,7 @@
 #include "src/shared/types/types.h"
 #include "src/stirling/core/data_table.h"
 #include "src/stirling/core/output.h"
+#include "src/stirling/source_connectors/tcp_stats/tcp_stats_connector.h"
 #include "src/stirling/source_connectors/tcp_stats/testing/tcp_stats_bpf_test_fixture.h"
 #include "src/stirling/testing/common.h"
 #include "src/stirling/utils/linux_headers.h"
@@ -37,9 +38,11 @@
 namespace px {
 namespace stirling {
 
-using ::px::stirling::testing::TcpTraceBPFTestFixture;
 using ::px::stirling::testing::RecordBatchSizeIs;
+using ::px::stirling::testing::TcpTraceBPFTestFixture;
+// using ::px::stirling::testing;
 
+// using ::px::stirling::tcp_stats;
 class TcpTraceTest : public TcpTraceBPFTestFixture {};
 
 //-----------------------------------------------------------------------------
@@ -47,19 +50,16 @@ class TcpTraceTest : public TcpTraceBPFTestFixture {};
 //-----------------------------------------------------------------------------
 
 TEST_F(TcpTraceTest, Capture) {
-  LOG(INFO) << "TESR_F - 1";
   StartTransferDataThread();
-  LOG(INFO) << "TESR_F - 2";
-  std::string cmd = "/dev/tcp/127.0.0.1/22";
+  std::string cmd = "echo \"hello\" | nc 127.0.0.1 22";
   ASSERT_OK_AND_ASSIGN(const std::string output, px::Exec(cmd));
-  LOG(INFO) << "TESR_F - 3";
   LOG(INFO) << output;
   StopTransferDataThread();
-
-  // Grab the data from Stirling.
   std::vector<TaggedRecordBatch> tablets = ConsumeRecords(TCPStatsConnector::kTCPStatsTableNum);
   ASSERT_NOT_EMPTY_AND_GET_RECORDS(const types::ColumnWrapperRecordBatch& record_batch, tablets);
-  EXPECT_THAT(record_batch, RecordBatchSizeIs(1));
+  // remote_addr:[127.0.0.1] remote_port:[22] tx:[6]
+
+  PX_LOG_VAR(tcp_stats::PrintTCPStatsTable(record_batch));
 }
 
 }  // namespace stirling

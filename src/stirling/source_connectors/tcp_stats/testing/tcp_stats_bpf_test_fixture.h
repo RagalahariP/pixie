@@ -41,7 +41,9 @@ class TcpTraceBPFTestFixture : public ::testing::Test {
     source_.reset(dynamic_cast<TCPStatsConnector*>(source_connector.release()));
     ASSERT_OK(source_->Init());
     source_->set_data_tables(data_tables_.tables());
-    StartTransferDataThread();
+    upid = md::UPID(1, 100, 23123);
+    upids.insert(upid);
+    ctx_ = std::make_unique<StandaloneContext>(upids);
   }
 
   void TearDown() override { ASSERT_OK(source_->Stop()); }
@@ -57,8 +59,7 @@ class TcpTraceBPFTestFixture : public ::testing::Test {
       transfer_enable_ = true;
       while (transfer_enable_) {
         {
-          absl::base_internal::SpinLockHolder lock(&tcp_stats_state_lock_);
-          RefreshContextCore();
+          RefreshContext(upids);
           source_->TransferData(ctx_.get());
         }
         std::this_thread::sleep_for(kTransferDataPeriod);
@@ -76,30 +77,33 @@ class TcpTraceBPFTestFixture : public ::testing::Test {
     // Give enough time for one more TransferData call by transfer_data_thread_,
     // so we make sure we've captured everything.
     std::this_thread::sleep_for(2 * kTransferDataPeriod);
-
-    absl::base_internal::SpinLockHolder lock(&tcp_stats_state_lock_);
     CHECK(transfer_data_thread_.joinable());
     transfer_enable_ = false;
     transfer_data_thread_.join();
+    source_->TransferData(ctx_.get());
   }
 
   std::vector<TaggedRecordBatch> ConsumeRecords(int table_num) {
     return source_->data_tables()[table_num]->ConsumeRecords();
   }
 
+  md::UPID getUpid() { return upid; }
+
+  void RefreshContext(const absl::flat_hash_set<md::UPID>& upids) {
+    absl::base_internal::SpinLockHolder lock(&tcp_stats_state_lock_);
+    ctx_ = std::make_unique<StandaloneContext>(upids);
+  }
   static constexpr int kTcpstatsTableNum = TCPStatsConnector::kTCPStatsTableNum;
 
   absl::base_internal::SpinLock tcp_stats_state_lock_;
-
+  md::UPID upid;
   std::unique_ptr<TCPStatsConnector> source_;
-  std::unique_ptr<SystemWideStandaloneContext> ctx_;
   std::atomic<bool> transfer_enable_ = false;
+  std::unique_ptr<StandaloneContext> ctx_;
+  absl::flat_hash_set<md::UPID> upids;
   std::thread transfer_data_thread_;
   DataTables data_tables_{TCPStatsConnector::kTables};
   static constexpr std::chrono::milliseconds kTransferDataPeriod{100};
-
- private:
-  void RefreshContextCore() { ctx_ = std::make_unique<SystemWideStandaloneContext>(); }
 };
 
 }  // namespace testing
