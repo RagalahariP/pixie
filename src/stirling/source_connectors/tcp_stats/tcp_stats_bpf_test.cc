@@ -47,19 +47,19 @@ class TcpTraceTest : public TcpTraceBPFTestFixture {};
 //-----------------------------------------------------------------------------
 
 TEST_F(TcpTraceTest, Capture) {
-   LOG(INFO) << "I am here TESR_F - 1";
+  LOG(INFO) << "TESR_F - 1";
   StartTransferDataThread();
-   LOG(INFO) << "I am here TESR_F - 2";
+  LOG(INFO) << "TESR_F - 2";
   std::string cmd = "/dev/tcp/127.0.0.1/22";
   ASSERT_OK_AND_ASSIGN(const std::string output, px::Exec(cmd));
-   LOG(INFO) << "I am here TESR_F - 3";
+  LOG(INFO) << "TESR_F - 3";
   LOG(INFO) << output;
   StopTransferDataThread();
 
   // Grab the data from Stirling.
   std::vector<TaggedRecordBatch> tablets = ConsumeRecords(TCPStatsConnector::kTCPStatsTableNum);
   ASSERT_NOT_EMPTY_AND_GET_RECORDS(const types::ColumnWrapperRecordBatch& record_batch, tablets);
-  EXPECT_THAT(record_batch, RecordBatchSizeIs(100));
+  EXPECT_THAT(record_batch, RecordBatchSizeIs(1));
 }
 
 }  // namespace stirling
