@@ -22,7 +22,8 @@ BUILD_DIR ?= .build
 TOT		       := $$(git rev-parse --show-toplevel)
 DOCKER_PROPERTIES_FILE := $(TOT)/docker.properties
 
-DEV_EXTRAS_TAG = $$(cat $(DOCKER_PROPERTIES_FILE) | cut -d'=' -f2)
+DEV_EXTRAS_TAG = $$(grep DOCKER_IMAGE_TAG $(DOCKER_PROPERTIES_FILE) | cut -d'=' -f2)
+DEV_EXTRAS_DIGEST = $$(grep DEV_IMAGE_WITH_EXTRAS_DIGEST $(DOCKER_PROPERTIES_FILE) | cut -d'=' -f2)
 DEV_EXTRAS_IMAGE = "gcr.io/pixie-oss/pixie-dev-public/dev_image_with_extras:$(DEV_EXTRAS_TAG)"
 
 ## Clang deb parameters
@@ -49,7 +50,7 @@ GRAALVM_ARCHIVE_FNAME := graalvm-native-image-22.3.0.tar.gz
 GRAALVM_ARCHIVE_GS_PATH := gs://pixie-dev-public/graalvm-native-image-22.3.0-$(GRAALVM_IMAGE_VERSION).tar.gz
 
 ## Sysroot parameters
-SYSROOT_REV := pl3
+SYSROOT_REV := pl6
 SYSROOT_BUILD_DIR := $(BUILD_DIR)/sysroots
 SYSROOT_ARCHITECTURES := amd64 arm64
 SYSROOT_VARIANTS := runtime build test
@@ -113,14 +114,18 @@ elasticsearch_image_tag := "gcr.io/pixie-oss/pixie-dev-public/elasticsearch:$(EL
 
 ## Linux kernel for qemu/BPF tests.
 KERNEL_BUILD_DIR := $(BUILD_DIR)/kernel_build
-KERNEL_BUILD_VERSIONS := 4.14.304 \
-	5.15.90 \
-	5.18.19 \
-	6.1.8
+# 4.19.276, 4.14.304 are the correct versions here, but there is a bug with patch > 255.
+KERNEL_BUILD_VERSIONS := 4.14.254 \
+	4.19.254 \
+	5.4.235 \
+	5.10.173 \
+	5.15.101 \
+	6.1.18
 
 KERNEL_BUILD_TEMPLATE := linux-build-%.tar.gz
 KERNEL_BUILD_TARGETS = $(addprefix $(KERNEL_BUILD_DIR)/, $(patsubst %,$(KERNEL_BUILD_TEMPLATE), $(KERNEL_BUILD_VERSIONS)))
-KERNEL_BUILD_GS_PATH := gs://pixie-dev-public/kernel-build/$$(date +%Y%m%d%H%M%S)
+KERNEL_BUILD_TS := $(shell date +%Y%m%d%H%M%S)
+KERNEL_BUILD_GS_PATH := gs://pixie-dev-public/kernel-build/$(KERNEL_BUILD_TS)
 
 ##############################################
 # Clang Build
@@ -145,7 +150,7 @@ upload_clang_deb: build_clang_deb_image ## Target to build and upload clang deb 
 ##############################################
 .PHONY: build_gperftools_deb_image
 build_gperftools_deb_image:
-	$(DOCKER) build --build-arg BASE_IMAGE=$(DEV_EXTRAS_IMAGE) gperftools_deb_image -t $(gperftools_deb_image_tag)
+	$(DOCKER) build --build-arg BASE_IMAGE=$(DEV_EXTRAS_IMAGE) --build-arg BASE_IMAGE_DIGEST=$(DEV_EXTRAS_DIGEST) gperftools_deb_image -t $(gperftools_deb_image_tag)
 
 .PHONY: upload_gperftools_deb
 upload_gperftools_deb: build_gperftools_deb_image ## Target to build and upload gperftools deb image
@@ -203,10 +208,9 @@ $(LINUX_HEADERS_ARM64_MERGED_FILE): $(LINUX_HEADER_ARM64_TARGETS)
 	tar -czf $@ -C $(LINUX_HEADER_ASSETS_BUILD_DIR) $(^F)
 
 .PHONY: upload_linux_headers
-upload_linux_headers:  $(LINUX_HEADERS_X86_64_MERGED_FILE) $(LINUX_HEADER_X86_64_TARGETS) $(LINUX_HEADERS_ARM64_MERGED_FILE) $(LINUX_HEADER_ARM64_TARGETS) ## Target to build and upload linux headers image
-	gsutil cp $< $(LINUX_HEADERS_GS_PATH)/$(<F)
-	sha256sum $<
-
+upload_linux_headers:  $(LINUX_HEADERS_X86_64_MERGED_FILE) $(LINUX_HEADERS_ARM64_MERGED_FILE) ## Target to build and upload linux headers image
+	gsutil cp $^ $(LINUX_HEADERS_GS_PATH)
+	sha256sum $^
 
 ##############################################
 # Sysroots Build
@@ -253,9 +257,14 @@ $(KERNEL_BUILD_DIR)/linux-build-%.tar.gz: kernel_builder/Dockerfile kernel_build
 
 .PHONY: upload_kernel_build
 upload_kernel_build:  $(KERNEL_BUILD_TARGETS)
-	echo "hello"
 	gsutil cp $^ $(KERNEL_BUILD_GS_PATH)
-	sha256sum $^
+	@echo "Add this to the qemu bzl file:"
+	@echo "============================="
+	@echo "kernel_build_date = ${KERNEL_BUILD_TS}"
+	@echo "kernel_catalog = {"
+	@sha256sum $^ | awk 'match($$0, /.*linux\-build\-(.*).tar.gz/, arr) { printf("    \"%s\": \"%s\",\n", arr[1], $$1)}'
+	@echo "}"
+	@echo "============================="
 
 clean:
 	@rm -rf $(BUILD_DIR)

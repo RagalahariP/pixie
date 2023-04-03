@@ -6,16 +6,9 @@ permissions:
   contents: read
 jobs:
   get-linter-image:
-    runs-on: ubuntu-latest
-    outputs:
-      image-with-tag: ${{ steps.get-version.outputs.image }}
-    steps:
-    - uses: actions/checkout@v3
-    - id: get-version
-      run: >-
-        IMAGE_NAME="gcr.io/pixie-oss/pixie-dev-public/linter_image";
-        IMAGE_TAG="$(cat docker.properties | cut -d'=' -f2)";
-        echo "image=${IMAGE_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+    uses: ./.github/workflows/get_image.yaml
+    with:
+      image-base-name: "linter_image"
   run-container-lint:
     runs-on: ubuntu-latest-8-cores
     needs: get-linter-image
@@ -23,11 +16,11 @@ jobs:
       image: ${{ needs.get-linter-image.outputs.image-with-tag }}
       options: --cpus 7
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3  # v3.5.0
       with:
         fetch-depth: 100
     - name: yarn cache
-      uses: actions/cache@v3
+      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8  # v3.3.1
       with:
         path: ./src/ui/.yarn/cache
         key: yarn-cache-${{ hashFiles('src/ui/yarn.lock', 'src/ui/.yarnrc.yml') }}

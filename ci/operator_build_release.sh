@@ -22,6 +22,9 @@ repo_path=$(pwd)
 release_tag=${TAG_NAME##*/v}
 versions_file="$(pwd)/src/utils/artifacts/artifact_db_updater/VERSIONS.json"
 
+# shellcheck source=ci/image_utils.sh
+. "${repo_path}/ci/image_utils.sh"
+
 echo "The release tag is: ${release_tag}"
 
 bazel run -c opt //src/utils/artifacts/versions_gen:versions_gen -- \
@@ -40,7 +43,7 @@ bucket="pixie-dev-public"
 # The previous version should be the 2nd item in the tags. Since this is a release build,
 # the first item in the tag is the current release.
 prev_tag=$(echo "$tags" | sed -n '2 p')
-
+extra_bazel_args=()
 if [[ $release_tag == *"-"* ]]; then
   build_type="--//k8s:build_type=dev"
   image_path="gcr.io/pixie-oss/pixie-dev/operator/operator_image:${release_tag}"
@@ -53,9 +56,7 @@ if [[ $release_tag == *"-"* ]]; then
   prev_tag=$(echo "$tags" | sed -n '1 p')
 fi
 
-# Push operator image.
-bazel run --stamp -c opt --//k8s:image_version="${release_tag}" \
-    --stamp "${build_type}" //k8s/operator:operator_images_push
+push_all_multiarch_images "//k8s/operator:operator_images_push" "//k8s/operator:list_image_bundle" "${release_tag}" "${build_type}" "${extra_bazel_args[@]}"
 
 # Build operator bundle for OLM.
 tmp_dir="$(mktemp -d)"
@@ -103,12 +104,14 @@ mv "$(pwd)/k8s/operator/helm/templates/deleter_tmp.yaml" "$(pwd)/k8s/operator/he
 cd "${tmp_dir}"
 bundle_image="gcr.io/pixie-oss/pixie-prod/operator/bundle:${release_tag}"
 index_image="gcr.io/pixie-oss/pixie-prod/operator/bundle_index:0.0.1"
-opm alpha bundle generate --package pixie-operator --channels "${channels}" --default "${channel}" --directory manifests
-docker build -t "${bundle_image}" -f bundle.Dockerfile .
-docker push "${bundle_image}"
-opm index add --bundles "${bundle_image}" --from-index "${index_image}" --tag "${index_image}" -u docker
 
-docker push "${index_image}"
+docker buildx create --name builder --driver docker-container --bootstrap
+docker buildx use builder
+
+opm alpha bundle generate --package pixie-operator --channels "${channels}" --default "${channel}" --directory manifests
+docker buildx build --platform linux/amd64,linux/arm64 -t "${bundle_image}" --push -f bundle.Dockerfile .
+opm index add --bundles "${bundle_image}" --from-index "${index_image}" --tag "${index_image}"  --generate --out-dockerfile="${tmp_dir}/index.Dockerfile" -u docker
+docker buildx build --platform linux/amd64,linux/arm64 -t "${index_image}" --push -f "${tmp_dir}/index.Dockerfile" .
 
 cd "${repo_path}"
 

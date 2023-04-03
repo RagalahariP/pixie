@@ -85,6 +85,16 @@ container_image(
 )
 
 container_image(
+    name = "nginx_alpine_openssl_3_0_7_image",
+    base = "@nginx_alpine_openssl_3_0_7_base_image//image",
+    layers = [
+        "//src/stirling/source_connectors/socket_tracer/testing/containers/ssl:nginx_conf",
+        "//src/stirling/source_connectors/socket_tracer/testing/containers/ssl:nginx_html",
+        "//src/stirling/source_connectors/socket_tracer/testing/containers/ssl:ssl_keys_layer",
+    ],
+)
+
+container_image(
     name = "nats_image",
     base = "@nats_base_image//image",
     layers = [
@@ -120,4 +130,9 @@ container_image(
 container_image(
     name = "py_grpc_helloworld_image",
     base = "@py_grpc_helloworld_image//image",
+)
+
+container_image(
+    name = "productcatalogservice_v0_2_0",
+    base = "@productcatalogservice_v0_2_0//image",
 )

@@ -50,13 +50,13 @@ def base_images():
 
     _gcr_io_image(
         "base_image",
-        "sha256:6424eb0738952803e98b9067a27ec5f410aae54ebc21dabec4e8bb93a30af30b",
+        "sha256:8267a5d9fa15a538227a8850e81cf6c548a78de73458e99a67e8799bbffb1ba0",
         "distroless/base",
     )
 
     _gcr_io_image(
         "base_image_debug",
-        "sha256:5fa21aeb39b7b6852bab06fe32e49071fe246e7bd479b80ebdc5797a587308e7",
+        "sha256:c59a1e5509d1b2586e28b899667774e599b79d7289a6bb893766a0cbbce7384b",
         "distroless/base",
     )
 
@@ -152,6 +152,12 @@ def stirling_test_images():
     _gcr_io_image(
         "nginx_openssl_1_1_1_base_image",
         "sha256:0b159cd1ee1203dad901967ac55eee18c24da84ba3be384690304be93538bea8",
+        "pixie-oss/pixie-dev-public/docker-deps/library/nginx",
+    )
+
+    _gcr_io_image(
+        "nginx_alpine_openssl_3_0_7_base_image",
+        "sha256:3eb380b81387e9f2a49cb6e5e18db016e33d62c37ea0e9be2339e9f0b3e26170",
         "pixie-oss/pixie-dev-public/docker-deps/library/nginx",
     )
 
@@ -271,6 +277,14 @@ def stirling_test_images():
         "rabbitmq_3_management",
         "sha256:650c7e0093842739ddfaadec0d45946c052dba42941bd5c0a082cbe914451c25",
         "pixie-oss/demo-apps/rabbitmq/rabbitmq:3-management",
+    )
+
+    # Tag: productcatalogservice:v0.2.0
+    # Arch: linux/amd64
+    _gcr_io_image(
+        "productcatalogservice_v0_2_0",
+        "sha256:1726e4dd813190ad1eae7f3c42483a3a83dd1676832bb7b04256455c8968d82a",
+        "google-samples/microservices-demo/productcatalogservice:v0.2.0",
     )
 
     # Built and pushed by src/stirling/testing/demo_apps/py_grpc/update_gcr.sh

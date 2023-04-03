@@ -14,7 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-FROM ubuntu:18.04
+FROM ubuntu:18.04@sha256:8aa9c2798215f99544d1ce7439ea9c3a6dfd82de607da1cec3a8a2fae005931b
 
 # Install required packages
 RUN apt-get update
@@ -71,7 +71,7 @@ RUN find usr/src/linux-headers-${KERN_VERSION}-pl -xtype l -exec rm {} +
 RUN rm -rf usr/share
 RUN find usr/src/linux-headers-${KERN_VERSION}-pl -maxdepth 1 -mindepth 1 ! -name include ! -name arch -type d \
     -exec rm -rf {} +
-RUN find usr/src/linux-headers-${KERN_VERSION}-pl/arch -maxdepth 1 -mindepth 1 ! -name ${ARCH} -type d -exec rm -rf {} +
+RUN find usr/src/linux-headers-${KERN_VERSION}-pl/arch -maxdepth 1 -mindepth 1 ! -name $(echo ${ARCH} | sed 's/x86_64/x86/g') -type d -exec rm -rf {} +
 RUN tar zcf linux-headers-${ARCH}-${KERN_VERSION}.tar.gz usr
 
 VOLUME /output

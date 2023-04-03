@@ -29,13 +29,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/metadata"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/client-go/kubernetes"
 
 	atpb "px.dev/pixie/src/cloud/artifact_tracker/artifacttrackerpb"
 	cpb "px.dev/pixie/src/cloud/config_manager/configmanagerpb"
@@ -53,18 +52,14 @@ type Server struct {
 	atClient            atpb.ArtifactTrackerClient
 	deployKeyClient     vzmgrpb.VZDeploymentKeyServiceClient
 	vzFeatureFlagClient VizierFeatureFlagClient
-	clientset           *kubernetes.Clientset
-	rm                  meta.RESTMapper
 }
 
 // NewServer creates GRPC handlers.
-func NewServer(atClient atpb.ArtifactTrackerClient, deployKeyClient vzmgrpb.VZDeploymentKeyServiceClient, ldSDKKey string, clientset *kubernetes.Clientset, rm meta.RESTMapper) *Server {
+func NewServer(atClient atpb.ArtifactTrackerClient, deployKeyClient vzmgrpb.VZDeploymentKeyServiceClient, ldSDKKey string) *Server {
 	return &Server{
 		atClient:            atClient,
 		deployKeyClient:     deployKeyClient,
 		vzFeatureFlagClient: NewVizierFeatureFlagClient(ldSDKKey),
-		clientset:           clientset,
-		rm:                  rm,
 	}
 }
 
@@ -164,6 +159,20 @@ func (s *Server) GetConfigForVizier(ctx context.Context,
 	if pemMemoryLimit == "" {
 		pemMemoryLimit = pemMemoryRequest
 	}
+
+	// We make slight modifications to the YAMLs depending on K8s version, to maintain support for older versions.
+	useBetaPDB := false
+	if in.K8sVersion != "" {
+		// podDisruptionBudget graduated from beta to stable as of v1.21.
+		minPDBVers, pdbErr := semver.ParseTolerant("1.21.0")
+		currentK8sVers, err := semver.ParseTolerant(in.K8sVersion)
+		if err == nil && pdbErr == nil {
+			if currentK8sVers.LT(minPDBVers) {
+				useBetaPDB = true
+			}
+		}
+	}
+
 	// We should eventually clean up the templating code, since our Helm charts and extracted YAMLs will now just
 	// be simple CRDs.
 	tmplValues := &vizieryamls.VizierTmplValues{
@@ -181,6 +190,7 @@ func (s *Server) GetConfigForVizier(ctx context.Context,
 		ClockConverter:        in.VzSpec.ClockConverter,
 		DataAccess:            in.VzSpec.DataAccess,
 		Registry:              in.VzSpec.Registry,
+		UseBetaPdbVersion:     useBetaPDB,
 	}
 
 	if in.VzSpec.DataCollectorParams != nil && in.VzSpec.DataCollectorParams.DatastreamBufferSize != 0 {
@@ -220,7 +230,7 @@ func (s *Server) GetConfigForVizier(ctx context.Context,
 	// Apply custom patches, if any.
 	if in.VzSpec.Patches != nil || len(in.VzSpec.Patches) > 0 {
 		for _, y := range vzYamls {
-			patchedYAML, err := yamls.AddPatchesToYAML(s.clientset, y.YAML, in.VzSpec.Patches, s.rm)
+			patchedYAML, err := yamls.AddPatchesToYAML(y.YAML, in.VzSpec.Patches)
 			if err != nil {
 				log.WithError(err).Error("Failed to add patches")
 				return nil, err
