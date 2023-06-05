@@ -92,13 +92,8 @@ std::vector<std::string_view> GetSourceNamesForGroup(SourceConnectorGroup group)
       return {};
     case SourceConnectorGroup::kProd:
       return {
-        ProcessStatsConnector::kName,
-        NetworkStatsConnector::kName,
-        JVMStatsConnector::kName,
-        SocketTraceConnector::kName,
-        PerfProfileConnector::kName,
         proc_exit_tracer::ProcExitConnector::kName,
-        StirlingErrorConnector::kName,
+       TCPStatsConnector::kName
       };
     case SourceConnectorGroup::kAll:
       return {

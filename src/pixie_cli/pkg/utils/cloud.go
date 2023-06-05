@@ -19,7 +19,7 @@
 package utils
 
 import (
-	"strings"
+	//"strings"
 
 	"google.golang.org/grpc"
 
@@ -28,7 +28,8 @@ import (
 
 // GetCloudClientConnection gets the GRPC connection based on the cloud addr.
 func GetCloudClientConnection(cloudAddr string) (*grpc.ClientConn, error) {
-	isInternal := strings.Contains(cloudAddr, "cluster.local")
+	//isInternal := strings.Contains(cloudAddr, "cluster.local")
+	isInternal := true 
 
 	dialOpts, err := services.GetGRPCClientDialOptsServerSideTLS(isInternal)
 	if err != nil {

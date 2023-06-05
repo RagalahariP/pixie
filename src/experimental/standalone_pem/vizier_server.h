@@ -121,7 +121,7 @@ class VizierServer final : public api::vizierpb::VizierService::Service {
       m_info->mutable_status()->set_code(0);
       response->Write(mutation_resp);
     }
-    LOG(INFO) << "Compiling and running query";
+    LOG(INFO) << "Compiling and running query- " << reader->query_str();
     // Send schema before sending query results.
     auto s_or_plan = px::carnot::planner::compiler::Compiler().Compile(reader->query_str(),
                                                                        compiler_state.get());

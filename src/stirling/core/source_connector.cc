@@ -62,7 +62,10 @@ void SourceConnector::PushData(DataPushCallback agent_callback) {
           data_table->id(), record_batch.tablet_id,
           std::make_unique<types::ColumnWrapperRecordBatch>(std::move(record_batch.records)));
       LOG_IF(DFATAL, !s.ok()) << absl::Substitute("Failed to push data. Message = $0", s.msg());
-    }
+      std::cout<<"data_table->id()"<<data_table->id()<<"\n";
+      //std::cout<<"record_batch.tablet_id"<<record_batch.tablet_id<<"\n";
+      //std::cout<<"record_batch.records"<<record_batch.records<<"\n";
+      }
   }
 }
 

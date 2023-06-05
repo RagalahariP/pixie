@@ -71,7 +71,7 @@ func NewConnector(cloudAddr string, vzInfo *cloudpb.ClusterInfo, directVzAddr st
 	if vzInfo != nil {
 		c.id = utils.UUIDFromProtoOrNil(vzInfo.ID)
 	}
-	c.cloudAddr = cloudAddr
+	c.cloudAddr = directVzAddr 
 	c.directVzAddr = directVzAddr
 	c.directVzKey = directVzKey
 
@@ -80,11 +80,13 @@ func NewConnector(cloudAddr string, vzInfo *cloudpb.ClusterInfo, directVzAddr st
 		addr = directVzAddr
 	}
 
+        fmt.Println("I am here before connect")
 	err := c.connect(addr)
 	if err != nil {
 		return nil, err
 	}
 
+        fmt.Println("I am here after connect")
 	c.vz = vizierpb.NewVizierServiceClient(c.conn)
 	c.vzDebug = vizierpb.NewVizierDebugServiceClient(c.conn)
 	return c, nil
@@ -102,20 +104,24 @@ func (c *Connector) connect(addr string) error {
 		<-ch
 		cancel()
 	}()
-	isInternal := strings.Contains(addr, "cluster.local")
+	isInternal := true
 
+        fmt.Println("I am here before GetGRPCClientDialOptsServerSideTLS")
 	dialOpts, err := services.GetGRPCClientDialOptsServerSideTLS(isInternal)
 	if err != nil {
 		return err
 	}
+        fmt.Println("I am here after GetGRPCClientDialOptsServerSideTLS %v", dialOpts)
 
 	dialOpts = append(dialOpts, grpc.WithBlock())
 	// Try to dial with a time out (ctrl-c can be used to cancel)
-	conn, err := grpc.DialContext(ctx, addr, dialOpts...)
+        fmt.Println("I am here before DialContext")
+        conn, err := grpc.DialContext(ctx, "0.0.0.0:12345", grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
 	c.conn = conn
+        fmt.Println("I am here after DialContext")
 
 	return nil
 }

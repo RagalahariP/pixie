@@ -132,6 +132,7 @@ void ProcExitConnector::TransferDataImpl(ConnectorContext* ctx) {
 
     UpdateCrashedJavaProcCounters(ctx->GetASID(), event, ctx->GetPIDInfoMap());
   }
+  //std::cout<<"I am from source connector after sending data"; 
   events_.clear();
 }
 
