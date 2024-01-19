@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -26,7 +25,6 @@
 #include "src/common/base/base.h"
 #include "src/common/system/system.h"
 #include "src/shared/types/types.h"
-#include "src/stirling/bpf_tools/bcc_wrapper.h"
 #include "src/stirling/core/connector_context.h"
 #include "src/stirling/core/data_table.h"
 #include "src/stirling/core/frequency_manager.h"
@@ -175,16 +173,14 @@ class SourceConnector : public NotCopyable {
   const ArrayView<DataTableSchema> table_schemas_;
 };
 
-class BCCSourceConnector : public SourceConnector {
+class CORESourceConnector : SourceConnector {
  public:
-  bpf_tools::BCCWrapper& BCC() { return *bcc_; }
-
+  bpf_tools::COREWrapper& CORE() { return *core_; }
  protected:
-  explicit BCCSourceConnector(std::string_view source_name,
+  explicit CORESourceConnector(std::string_view source_name,
                               const ArrayView<DataTableSchema>& table_schemas)
-      : SourceConnector(source_name, table_schemas), bcc_(bpf_tools::CreateBCC()) {}
-  std::unique_ptr<bpf_tools::BCCWrapper> bcc_;
-};
-
+      : SourceConnector(source_name, table_schemas), core_(bpf_tools::CreateCORE()) {}
+  std::unique_ptr<bpf_tools::COREWrapper> core_;
+}
 }  // namespace stirling
 }  // namespace px

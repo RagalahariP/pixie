@@ -1,0 +1,8 @@
+package(default_visibility = [
+    "//src/stirling:__subpackages__",
+])
+
+cc_library(
+    name = "vmlinux_lib",
+    hdrs = ["vmlinux.h"],
+)

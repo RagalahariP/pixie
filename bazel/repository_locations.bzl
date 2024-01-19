@@ -16,10 +16,10 @@
 
 REPOSITORY_LOCATIONS = dict(
     bazel_gazelle = dict(
-        sha256 = "29218f8e0cebe583643cbf93cae6f971be8a2484cdcfa1e45057658df8d54002",
+        sha256 = "ecba0f04f96b4960a5b250c8e8eeec42281035970aa8852dda73098274d14a1d",
         urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.32.0/bazel-gazelle-v0.32.0.tar.gz",
-            "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.32.0/bazel-gazelle-v0.32.0.tar.gz",
+            "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.29.0/bazel-gazelle-v0.29.0.tar.gz",
+            "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.29.0/bazel-gazelle-v0.29.0.tar.gz",
         ],
     ),
     bazel_skylib = dict(
@@ -62,9 +62,9 @@ REPOSITORY_LOCATIONS = dict(
         urls = ["https://github.com/arun11299/cpp-jwt/archive/refs/tags/v1.1.1.tar.gz"],
     ),
     com_github_bazelbuild_buildtools = dict(
-        sha256 = "977a0bd4593c8d4c8f45e056d181c35e48aa01ad4f8090bdb84f78dca42f47dc",
-        strip_prefix = "buildtools-6.1.2",
-        urls = ["https://github.com/bazelbuild/buildtools/archive/refs/tags/v6.1.2.tar.gz"],
+        sha256 = "d368c47bbfc055010f118efb2962987475418737e901f7782d2a966d1dc80296",
+        strip_prefix = "buildtools-4.2.5",
+        urls = ["https://github.com/bazelbuild/buildtools/archive/refs/tags/4.2.5.tar.gz"],
     ),
     com_github_cameron314_concurrentqueue = dict(
         sha256 = "eb37336bf9ae59aca7b954db3350d9b30d1cab24b96c7676f36040aa76e915e8",
@@ -152,15 +152,17 @@ REPOSITORY_LOCATIONS = dict(
             "https://github.com/libbpf/libbpf/archive/refs/tags/v1.0.1.tar.gz",
         ],
     ),
+    com_github_libbpf_bpftool = dict(
+        sha256 = "8b2fa8c9c8c70baf107df5aecd24197774af48cf38c76803478ee641edc436f2",
+        strip_prefix = "bpftool-7.3.0",
+        urls = [
+            "https://github.com/libbpf/bpftool/archive/refs/tags/v7.3.0.tar.gz"
+        ],
+    ),
     com_github_libuv_libuv = dict(
         sha256 = "371e5419708f6aaeb8656671f89400b92a9bba6443369af1bb70bcd6e4b3c764",
         strip_prefix = "libuv-1.42.0",
         urls = ["https://github.com/libuv/libuv/archive/refs/tags/v1.42.0.tar.gz"],
-    ),
-    com_github_mongodb_mongo_c_driver = dict(
-        sha256 = "fdb9de045efabedf67b0ac8d7e77006705b22d954579567af75d440fd0a2c5e1",
-        strip_prefix = "mongo-c-driver-1.24.0",
-        urls = ["https://github.com/mongodb/mongo-c-driver/archive/refs/tags/1.24.0.tar.gz"],
     ),
     com_github_nats_io_natsc = dict(
         sha256 = "16e700d912034faefb235a955bd920cfe4d449a260d0371b9694d722eb617ae1",
@@ -202,9 +204,9 @@ REPOSITORY_LOCATIONS = dict(
         urls = ["https://github.com/pixie-io/ELFIO/archive/98d87a350f2384ce22b5dc72c79312a6854d88d4.tar.gz"],
     ),
     com_github_simdutf_simdutf = dict(
-        urls = ["https://github.com/simdutf/simdutf/archive/refs/tags/v4.0.3.zip"],
-        strip_prefix = "simdutf-4.0.3",
-        sha256 = "a7f468fdb4355259ed81d4e97434abcea85098986592c4f6012b9d208b8734fe",
+        urls = ["https://github.com/simdutf/simdutf/archive/refs/tags/v3.2.8.tar.gz"],
+        strip_prefix = "simdutf-3.2.8",
+        sha256 = "3651e290e97af000cef506ceffbbf05f412fd6100e1859baf0267d42941e1e44",
     ),
     com_github_tencent_rapidjson = dict(
         sha256 = "4a34a0c21794f067afca6c9809971f0bd77a1d1834c4dc53bdd09e4ab4d05ce4",
@@ -287,119 +289,80 @@ REPOSITORY_LOCATIONS = dict(
         urls = ["https://github.com/oneapi-src/oneTBB/archive/e6104c9599f7f10473caf545199f7468c0a8e52f.tar.gz"],
     ),
     com_llvm_clang_15 = dict(
-        sha256 = "13924fc595146bf2480f8c853bb1b995ef511ee2d7eb6f5c19ab429e31caaf98",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/clang-min-15.0-pl12.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/clang-min-15.0-pl12.tar.gz",
-        ],
+        sha256 = "a275cde426a790cdf6eaecc2a33bac320ee61ceb4f5e76d2c73d3c555fdcedfc",
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/clang-min-15.0-pl11.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_x86_64_glibc_host = dict(
-        sha256 = "bd71e0fc496c10804840827161f183f2430304d2f272b622a3c101744c4799d2",
+        sha256 = "f832e8cf5285aa7bc66d9e958cd10e14587a0d6d2376e293e6644651fe064b05",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libstdc%2B%2B.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libstdc%2B%2B.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libstdc%2B%2B.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_libcpp_x86_64_glibc_host = dict(
-        sha256 = "f7c126bced889730b4b7f63a3c4290895ce8943d87b279558a6e7ed835eb1ef9",
+        sha256 = "83d6c8f39688646e733b9341d3d8a67978ac33dc6874d730338492ccec61e40b",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libcxx.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libcxx.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libcxx.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_libcpp_x86_64_glibc_host_asan = dict(
-        sha256 = "c50fd3b3c9b359f1112646aed544f274d28372cb464bc3e1ad11e25c4da6ed3c",
+        sha256 = "5b0e518bc36b308d8f64a074bdce45f709f4f661f45a0c1e8c4a92ead6ef7b7d",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libcxx-asan.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libcxx-asan.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libcxx-asan.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_libcpp_x86_64_glibc_host_msan = dict(
-        sha256 = "b176a2df6f31f07bc4c2675c82523cf290cc29a037af33798ad6786b161ef570",
+        sha256 = "39e959d02a2ae753af64d61a3ae264fd73650e63c258738905f61f944e8a2c18",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libcxx-msan.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libcxx-msan.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libcxx-msan.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_libcpp_x86_64_glibc_host_tsan = dict(
-        sha256 = "13ba581991271197a33aa35576d62ffa687e56b4799aadb8b91e4a30e1ebe57f",
+        sha256 = "4e39d01e4719d0491b4d970bb963a8c4e90c75a1002c90e7cee5fc08fd003f83",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libcxx-tsan.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libcxx-tsan.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libcxx-tsan.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_x86_64_glibc2_36 = dict(
-        sha256 = "22dbfc1fe13c4809b7df94360f45d7ce2064bcd954ab642a7053c79f95fe21ad",
+        sha256 = "13a37fdba0e9bf386873509ded490177200265839a4abdbdccacb8bf2b9795ab",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libstdc++-x86_64-sysroot.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libstdc++-x86_64-sysroot.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libstdc++-x86_64-sysroot.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_libcpp_x86_64_glibc2_36 = dict(
-        sha256 = "fba4ba91f794809fb74d8736a0b281589eb3faa1064a55b03f18fabea22d4318",
+        sha256 = "6909bf0f95c2b0d798365651a8fb8e93c9b01994c5e68e76e71fb7e5100a3965",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libcxx-x86_64-sysroot.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libcxx-x86_64-sysroot.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libcxx-x86_64-sysroot.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_aarch64_glibc2_36 = dict(
-        sha256 = "a38c075733a18e59d41994e18ea0e4944779d8d971dc1f825dc52a81253c602e",
+        sha256 = "e1d0b628a7915113e79ac0fc1dfd4bc730177d0652fb684026ecfb87694416b0",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libstdc++-aarch64-sysroot.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libstdc++-aarch64-sysroot.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libstdc++-aarch64-sysroot.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_lib_libcpp_aarch64_glibc2_36 = dict(
-        sha256 = "d8583cbd55a66c6ea2d53268b3ae4829dae6d9e16e5d8040646f2cf1b7d8cdde",
+        sha256 = "a0199c3a4247ea0e82a5b6914efac0cf339ad75ef64f927e353f84e2d0f8b60b",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/llvm-15.0-pl12-libcxx-aarch64-sysroot.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/llvm-15.0-pl12-libcxx-aarch64-sysroot.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/llvm-15.0-pl11-libcxx-aarch64-sysroot.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_libcxx_x86_64_glibc_host = dict(
-        sha256 = "12321054fa99b953ffde02a1b100e8ba1f16b3769f2db7623e19c0cac9d2185a",
+        sha256 = "2e123059d395daec37153fc413fe377a6a551b2919cd658fd9a302b11fea5201",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/libcxx-15.0-pl12.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/libcxx-15.0-pl12.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/libcxx-15.0-pl11.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_libcxx_x86_64_glibc2_36 = dict(
-        sha256 = "6f0e66ba3c580f9cd2950f6c978d87234e876b8de3cdb8b3f0f827b57bdf2b64",
+        sha256 = "51135b52804d3a899e58e1a7162ed065e95eb5d3822cab39edcfe9aed466eede",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/libcxx-15.0-pl12-x86_64-sysroot.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/libcxx-15.0-pl12-x86_64-sysroot.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/libcxx-15.0-pl11-x86_64-sysroot.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_llvm_libcxx_aarch64_glibc2_36 = dict(
-        sha256 = "f5d4b52a9c142f28f9e88e09ebd52c91f2749417e6dcda28e66c8b20688b9b1a",
+        sha256 = "a90304bd3e6530e6228beb8fede84fc06c893cefdab4b12859d5e93661aac7ce",
         strip_prefix = "",
-        urls = [
-            "https://github.com/pixie-io/dev-artifacts/releases/download/clang%2F15.0-pl12/libcxx-15.0-pl12-aarch64-sysroot.tar.gz",
-            "https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl12/libcxx-15.0-pl12-aarch64-sysroot.tar.gz",
-        ],
+        urls = ["https://storage.googleapis.com/pixie-dev-public/clang/15.0-pl11/libcxx-15.0-pl11-aarch64-sysroot.tar.gz"],
         manual_license_name = "llvm/llvm-project",
     ),
     com_oracle_openjdk_18 = dict(
@@ -420,10 +383,10 @@ REPOSITORY_LOCATIONS = dict(
         urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
     ),
     io_bazel_rules_go = dict(
-        sha256 = "278b7ff5a826f3dc10f04feaf0b70d48b68748ccd512d7f98bf442077f043fe3",
+        sha256 = "dd926a88a564a9246713a9c00b35315f54cbd46b31a26d5d8fb264c07045f05d",
         urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.41.0/rules_go-v0.41.0.zip",
-            "https://github.com/bazelbuild/rules_go/releases/download/v0.41.0/rules_go-v0.41.0.zip",
+            "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
+            "https://github.com/bazelbuild/rules_go/releases/download/v0.38.1/rules_go-v0.38.1.zip",
         ],
     ),
     io_bazel_rules_k8s = dict(
@@ -462,9 +425,9 @@ REPOSITORY_LOCATIONS = dict(
         urls = ["https://github.com/bazelbuild/rules_python/archive/refs/tags/0.8.1.tar.gz"],
     ),
     rules_jvm_external = dict(
-        urls = ["https://github.com/bazelbuild/rules_jvm_external/archive/refs/tags/5.2.tar.gz"],
-        sha256 = "c9ae901381ae7f7eca08aed96caeb542f96c5449052db9c9d27274a8dc154cdf",
-        strip_prefix = "rules_jvm_external-5.2",
+        urls = ["https://github.com/bazelbuild/rules_jvm_external/archive/refs/tags/4.2.tar.gz"],
+        sha256 = "2cd77de091e5376afaf9cc391c15f093ebd0105192373b334f0a855d89092ad5",
+        strip_prefix = "rules_jvm_external-4.2",
     ),
     rules_pkg = dict(
         sha256 = "eea0f59c28a9241156a47d7a8e32db9122f3d50b505fae0f33de6ce4d9b61834",
