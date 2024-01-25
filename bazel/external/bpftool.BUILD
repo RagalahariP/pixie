@@ -24,14 +24,23 @@ filegroup(
 make(
     name = "bpftool",
     args = [
-        "ARCH=x86",
         "-C src",
-        "bootstrap"
+        "ARCH= ",
+        "CROSS_COMPILE= ",
     ],
+    env = dict(
+        BUILD_STATIC_ONLY = "y",
+        NO_PKG_CONFIG = "1",
+    ),
+    # libelf is a dependency of libbpf.
+    linkopts = [
+        # ELF binary parsing.
+        "-lelf",
+    ],
+    out_lib_dir = "lib64",
     lib_source = ":bpftool_source",
     targets = [
-        "install",
-        "install_uapi_headers",
+        "bootstrap",
     ],
     visibility = ["//visibility:public"],
 )
