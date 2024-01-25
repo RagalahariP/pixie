@@ -186,5 +186,14 @@ class BCCSourceConnector : public SourceConnector {
   std::unique_ptr<bpf_tools::BCCWrapper> bcc_;
 };
 
+class CORESourceConnector : SourceConnector {
+ public:
+  bpf_tools::COREWrapper& CORE() { return *core_; }
+ protected:
+  explicit CORESourceConnector(std::string_view source_name,
+                              const ArrayView<DataTableSchema>& table_schemas)
+      : SourceConnector(source_name, table_schemas), core_(bpf_tools::CreateCORE()) {}
+  std::unique_ptr<bpf_tools::COREWrapper> core_;
+}
 }  // namespace stirling
 }  // namespace px

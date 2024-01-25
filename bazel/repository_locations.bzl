@@ -152,6 +152,13 @@ REPOSITORY_LOCATIONS = dict(
             "https://github.com/libbpf/libbpf/archive/refs/tags/v1.0.1.tar.gz",
         ],
     ),
+    com_github_libbpf_bpftool = dict(
+        sha256 = "3e8a12b800a09f7b78f27716c9d54ac814f1caeed38bd4e9b99f3fc0ee8788e9",
+        strip_prefix="bpftool-libbpf-v7.3.0-sources",
+        urls = [
+            "https://github.com/libbpf/bpftool/releases/download/v7.3.0/bpftool-libbpf-v7.3.0-sources.tar.gz"
+        ],
+    ),
     com_github_libuv_libuv = dict(
         sha256 = "371e5419708f6aaeb8656671f89400b92a9bba6443369af1bb70bcd6e4b3c764",
         strip_prefix = "libuv-1.42.0",
